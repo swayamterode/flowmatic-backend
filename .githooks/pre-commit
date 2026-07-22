@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+#
+# Secret-scanning safety net: block commits that contain secrets.
+# Shared with the team via `git config core.hooksPath .githooks`.
+#
+# Bypass (use sparingly, e.g. an intentional test fixture already allowlisted
+# in .gitleaks.toml): git commit --no-verify
+#
+set -euo pipefail
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  cat >&2 <<'EOF'
+[pre-commit] gitleaks is not installed, so staged changes were NOT scanned for secrets.
+             Install it and commit again:
+               macOS:  brew install gitleaks
+               other:  https://github.com/gitleaks/gitleaks#installing
+             To commit anyway (not recommended): git commit --no-verify
+EOF
+  exit 1
+fi
+
+# Scan only what is staged. --redact keeps any found secret out of the terminal output.
+if ! gitleaks git --pre-commit --staged --redact --verbose; then
+  cat >&2 <<'EOF'
+
+[pre-commit] gitleaks found a potential secret in your staged changes (commit blocked).
+             - Remove the secret and use an env var / secrets manager instead.
+             - If it is a false positive, add an allowlist entry to .gitleaks.toml.
+             - To bypass this once (not recommended): git commit --no-verify
+EOF
+  exit 1
+fi

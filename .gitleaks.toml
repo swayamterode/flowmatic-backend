@@ -1,0 +1,24 @@
+# gitleaks configuration for flowmatic-backend
+# Extends the built-in ruleset (100+ secret patterns) and layers repo-specific allowlists on top.
+# Docs: https://github.com/gitleaks/gitleaks#configuration
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Global allowlist for known-safe, non-secret matches"
+
+# Files/paths that only ever contain placeholders or documentation, never real secrets.
+paths = [
+  '''\.gitleaks\.toml''',
+  '''CODE_EXPLAINED\.md''',
+  '''(^|/)README\.md''',
+  '''src/test/.*''',
+]
+
+# Placeholder / example values that look secret-like but are safe by convention.
+regexes = [
+  '''(?i)(your|example|placeholder|changeme|dummy|sample|test)[-_]?(secret|password|token|key)''',
+  '''(?i)=\s*(\$\{[^}]+\}|<[^>]+>)''',      # ${ENV_VAR} or <placeholder> in config
+  '''(?i)password\s*=\s*(password|postgres|root|admin|secret)\b''', # common local-dev DB defaults
+]
