@@ -37,7 +37,8 @@ user is frontend work and out of scope here.
 - Nested `items` inside `items` (one level of element description only).
 - Any database migration. `output_json` is already a JSON column; `node_type` and `status` are
   VARCHAR specifically so new values need no schema change.
-- Recording messages when a **template** error aborts a batch — see Limitations.
+- Making template errors per-item recoverable. A broken template still aborts the batch; only the
+  record of what was already sent is preserved. See "Partial record on abort".
 
 ## Key decisions
 
@@ -46,14 +47,18 @@ user is frontend work and out of scope here.
    database access, and may contain whatever the model wrote about a customer. The alternative
    (record `to` + `subject`, omit `body`) was declined in favour of the run panel showing the actual
    text.
-2. **Element validation is included.** An `array` declared with `items` also checks that each element
+2. **A failed node can carry an output.** Without this, a template error mid-batch discards the
+   record of every email already sent — the exact blindness Change 1 exists to remove. Rather than
+   documenting that as a limitation, `NodeExecutionResult` gains a failure-with-output factory and
+   `WorkflowExecutionService` persists it. Fail-fast semantics are unchanged.
+3. **Element validation is included.** An `array` declared with `items` also checks that each element
    is an object carrying every declared item name. This is broader than the requirements' written
    acceptance criteria, and deliberate: an array of bare strings is exactly the failure Change 3
    exists to catch, and leaving it unchecked sends the user to debug the email node again.
-3. **Schema handling is extracted** from `AiNodeExecutor` into `AiOutputSchema`. Rendering and
+4. **Schema handling is extracted** from `AiNodeExecutor` into `AiOutputSchema`. Rendering and
    validating a schema is a separate concern from resolve-prompt / call-model / parse, and inlining
    it would roughly double a 122-line executor.
-4. **Unrecognised type names are not validated.** Types are freeform strings today, so an existing
+5. **Unrecognised type names are not validated.** Types are freeform strings today, so an existing
    workflow declaring `type: "date"` must not start failing.
 
 ---
@@ -107,12 +112,39 @@ with no `messagesTruncated` key, and a body of exactly 2000 characters is record
 Truncation is declared in the payload, never silent. Only the *recorded* body is truncated — the sent
 message is untouched. Subject is left uncapped, matching the requirements.
 
-### Limitations (stated, not hidden)
+### Partial record on abort
 
-A **template** error mid-batch still returns `NodeExecutionResult.failure(...)` immediately and
-discards `messages`, so emails already sent in that batch go unrecorded. Fixing it means letting a
-failure carry an output map, i.e. changing `NodeExecutionResult` — beyond what was asked.
-**Transport** failures behave as required: the batch completes and every message is recorded.
+**Transport** failures behave as the requirements demand: the batch completes and every message is
+recorded. A **template** error — an unresolvable `{{…}}`, say an element with no `email` — still
+fails the node immediately rather than skipping the item, because a broken template is a workflow bug
+rather than a per-recipient hiccup, and that fail-fast behaviour is correct today. But the emails
+already sent in that batch must still be visible, so the failure carries the same output object the
+success path would have built:
+
+```json
+{ "sent": 12, "total": 50, "failed": [],
+  "messages": [ "…12 SENT entries…",
+    { "to": "dave@example.com", "status": "FAILED",
+      "error": "Email template error: could not resolve {{item.email}}" } ] }
+```
+
+The aborting item gets its own entry, so `messages[i]` still lines up with `forEach` element `i`.
+Fields that never resolved are omitted from that entry: `to` appears only if it resolved before the
+throw, and `subject`/`body` are absent.
+
+Two small changes outside the email executor make this possible:
+
+- `NodeExecutionResult.failureWithOutput(String errorMessage, Map<String,Object> output)` — a named
+  factory rather than a `failure(String, Map)` overload, which at a call site would read too much
+  like the existing `failure(String, String rawDetail)`.
+- `WorkflowExecutionService`, failure branch (lines 152–159): set `outputJson` when the result
+  carries a **non-empty** output, so every existing failure keeps `output_json` NULL rather than
+  starting to write `{}`. The failed node's output is deliberately **not** threaded into the run
+  context — the run stops there and downstream nodes must not see it.
+
+`WorkflowRunController.nodeLog` already calls `parse(getOutputJson())` unconditionally, so the
+partial record reaches the API with no controller change. The facility is general — the other
+`forEach` executor (HTTP) could adopt it later — but this change does not touch it.
 
 ---
 
@@ -187,7 +219,7 @@ Type checks are loose — reject genuine shape mismatches only:
 
 ## Architecture
 
-One new unit, two existing files changed. Validation runs only when an `output` schema is declared —
+One new unit, four existing files changed. Validation runs only when an `output` schema is declared —
 the no-schema path still returns `{{ai.text}}` untouched.
 
 ```
@@ -198,13 +230,14 @@ AiNodeExecutor ──uses──> AiOutputSchema  (new, package-private)
                            String formatInstructions()
                            Optional<String> validate(Map<String,Object> parsed)
 
-EmailOutputNodeExecutor    (message recording; no new collaborators)
+EmailOutputNodeExecutor ──> NodeExecutionResult.failureWithOutput(msg, partial)   (new factory)
+                                     ▲
+WorkflowExecutionService ────────────┘  persists a non-empty output on the failure branch
 ```
 
 `AiNodeExecutor` keeps its existing flow — resolve prompt, append instructions, call the model, parse
-— and gains one validation step between parse and success. Nothing outside the executor package
-changes; `NodeExecutionResult`, `NodeRunLog`, `WorkflowExecutionService` and `WorkflowRunController`
-are all untouched.
+— and gains one validation step between parse and success. `NodeRunLog` and `WorkflowRunController`
+are untouched, and no database migration is needed.
 
 ## Testing
 
@@ -217,6 +250,13 @@ are all untouched.
 - 250 recipients → 200 entries plus `messagesTruncated: true`.
 - A body over 2000 characters → recorded body cut to 2000 plus `bodyTruncated: true` on that message,
   and the *sent* body still complete.
+- A template error on the second of three items → the node fails, and the carried output records the
+  first message as `SENT` and the second as `FAILED` with the template error.
+
+`WorkflowExecutionServiceTest` (or the existing integration test, whichever fits the current setup)
+
+- A node failing with a non-empty output persists it to `output_json`; a node failing with an empty
+  output leaves `output_json` NULL; neither puts the failed node's output into the run context.
 
 `AiNodeExecutorTest`
 
@@ -238,5 +278,6 @@ must keep passing unchanged, as must `WorkflowExecutionIntegrationTest`.
 | Change | Files | Unblocks |
 |---|---|---|
 | 1. Report sent messages | `EmailOutputNodeExecutor` | The run panel showing who was emailed, with what subject and body |
+| 1b. Partial record on abort | `NodeExecutionResult`, `WorkflowExecutionService` | Seeing what was sent even when the batch aborts on a template error |
 | 2. `items` on array outputs | `AiNodeExecutor`, `AiOutputSchema` | Truthful `{{item.…}}` suggestions; AI authoring per-recipient email |
 | 3. Validate against schema | `AiNodeExecutor`, `AiOutputSchema` | Failures reported on the node that caused them |
