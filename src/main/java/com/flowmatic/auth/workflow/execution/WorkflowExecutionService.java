@@ -20,7 +20,10 @@ import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Queues and runs workflows. A run request only <em>enqueues</em> a PENDING {@link WorkflowRun}
@@ -54,6 +57,25 @@ public class WorkflowExecutionService {
     this.workflowRunRepository = workflowRunRepository;
     this.nodeRunLogRepository = nodeRunLogRepository;
     this.executorRegistry = executorRegistry;
+  }
+
+  /**
+   * Deletes a workflow together with its run history. The {@code workflow_runs} and {@code
+   * node_run_logs} foreign keys are RESTRICT, so children must go first — deepest table first.
+   *
+   * @throws ResponseStatusException 409 if a run is queued or executing, since the drainer would
+   *     otherwise be writing node logs for rows this transaction is removing.
+   */
+  @Transactional
+  public void deleteWithHistory(Long workflowId) {
+    if (workflowRunRepository.existsByWorkflow_IdAndStatusIn(
+        workflowId, List.of(WorkflowRunStatus.PENDING, WorkflowRunStatus.RUNNING))) {
+      throw new ResponseStatusException(
+          HttpStatus.CONFLICT, "Workflow has a run in progress; try again once it finishes");
+    }
+    nodeRunLogRepository.deleteByWorkflowId(workflowId);
+    workflowRunRepository.deleteByWorkflowId(workflowId);
+    workflowRepository.deleteById(workflowId);
   }
 
   /** Enqueues a run: persists a PENDING {@link WorkflowRun} and returns immediately. */

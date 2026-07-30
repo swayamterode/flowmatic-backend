@@ -1,9 +1,11 @@
 package com.flowmatic.auth.workflow.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.flowmatic.auth.dto.MessageResponse;
 import com.flowmatic.auth.entity.User;
 import com.flowmatic.auth.repository.UserRepository;
 import com.flowmatic.auth.workflow.entity.Workflow;
+import com.flowmatic.auth.workflow.execution.WorkflowExecutionService;
 import com.flowmatic.auth.workflow.repository.WorkflowRepository;
 import java.util.List;
 import java.util.Map;
@@ -30,14 +32,17 @@ public class WorkflowController {
   private final WorkflowRepository workflowRepository;
   private final UserRepository userRepository;
   private final CurrentUser currentUser;
+  private final WorkflowExecutionService executionService;
 
   public WorkflowController(
       WorkflowRepository workflowRepository,
       UserRepository userRepository,
-      CurrentUser currentUser) {
+      CurrentUser currentUser,
+      WorkflowExecutionService executionService) {
     this.workflowRepository = workflowRepository;
     this.userRepository = userRepository;
     this.currentUser = currentUser;
+    this.executionService = executionService;
   }
 
   @PostMapping
@@ -90,11 +95,17 @@ public class WorkflowController {
     return ResponseEntity.ok(detail(workflowRepository.save(workflow)));
   }
 
+  /** Returns 200 with a body rather than an empty 204 — the frontend shows the message directly. */
   @DeleteMapping("/{id}")
-  public ResponseEntity<?> delete(@PathVariable Long id, Authentication authentication) {
+  public ResponseEntity<MessageResponse> delete(
+      @PathVariable Long id, Authentication authentication) {
     Workflow workflow = requireOwned(id, authentication);
-    workflowRepository.delete(workflow);
-    return ResponseEntity.noContent().build();
+    // Runs and node logs reference the workflow behind RESTRICT foreign keys; they go first.
+    executionService.deleteWithHistory(id);
+    return ResponseEntity.ok(
+        MessageResponse.builder()
+            .message("Workflow \"" + workflow.getName() + "\" deleted")
+            .build());
   }
 
   /**
