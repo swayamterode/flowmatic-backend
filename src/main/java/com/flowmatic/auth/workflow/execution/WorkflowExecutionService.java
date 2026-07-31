@@ -9,6 +9,7 @@ import com.flowmatic.auth.workflow.entity.WorkflowRun;
 import com.flowmatic.auth.workflow.entity.WorkflowRunStatus;
 import com.flowmatic.auth.workflow.execution.WorkflowGraph.GraphEdge;
 import com.flowmatic.auth.workflow.execution.WorkflowGraph.GraphNode;
+import com.flowmatic.auth.workflow.executor.EmailOutputNodeExecutor;
 import com.flowmatic.auth.workflow.repository.NodeRunLogRepository;
 import com.flowmatic.auth.workflow.repository.WorkflowRepository;
 import com.flowmatic.auth.workflow.repository.WorkflowRunRepository;
@@ -47,16 +48,19 @@ public class WorkflowExecutionService {
   private final WorkflowRunRepository workflowRunRepository;
   private final NodeRunLogRepository nodeRunLogRepository;
   private final NodeExecutorRegistry executorRegistry;
+  private final EmailOutputNodeExecutor emailOutputNodeExecutor;
 
   public WorkflowExecutionService(
       WorkflowRepository workflowRepository,
       WorkflowRunRepository workflowRunRepository,
       NodeRunLogRepository nodeRunLogRepository,
-      NodeExecutorRegistry executorRegistry) {
+      NodeExecutorRegistry executorRegistry,
+      EmailOutputNodeExecutor emailOutputNodeExecutor) {
     this.workflowRepository = workflowRepository;
     this.workflowRunRepository = workflowRunRepository;
     this.nodeRunLogRepository = nodeRunLogRepository;
     this.executorRegistry = executorRegistry;
+    this.emailOutputNodeExecutor = emailOutputNodeExecutor;
   }
 
   /**
@@ -76,6 +80,54 @@ public class WorkflowExecutionService {
     nodeRunLogRepository.deleteByWorkflowId(workflowId);
     workflowRunRepository.deleteByWorkflowId(workflowId);
     workflowRepository.deleteById(workflowId);
+  }
+
+  /**
+   * Sends every still-{@code PENDING} message an OUTPUT node held for manual review, and persists
+   * the result back over the node's log entry. The row lock from {@link
+   * NodeRunLogRepository#findForUpdate} is held for the whole transaction, so an overlapping call
+   * for the same node run waits and then finds nothing left to send rather than sending twice.
+   *
+   * @throws ResponseStatusException 404 if the run doesn't exist or isn't owned by {@code userId},
+   *     or if {@code nodeId} was never logged for it; 409 if the node isn't a manual-mode OUTPUT
+   *     node (nothing was ever held for review)
+   */
+  @Transactional
+  public NodeRunLog sendPendingMessages(Long runId, Long userId, String nodeId) {
+    workflowRunRepository
+        .findById(runId)
+        .filter(r -> r.getWorkflow().getUser().getId().equals(userId))
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Run not found"));
+
+    NodeRunLog nodeLog =
+        nodeRunLogRepository
+            .findForUpdate(runId, nodeId)
+            .orElseThrow(
+                () ->
+                    new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Node not found in this run"));
+
+    Map<String, Object> output = parseOutput(nodeLog.getOutputJson());
+    if (output == null || !"manual".equals(output.get("sendMode"))) {
+      throw new ResponseStatusException(
+          HttpStatus.CONFLICT, "This node has no pending messages to send");
+    }
+
+    Map<String, Object> updated = emailOutputNodeExecutor.sendPending(output);
+    nodeLog.setOutputJson(toJson(updated));
+    return nodeRunLogRepository.save(nodeLog);
+  }
+
+  @SuppressWarnings("unchecked")
+  private Map<String, Object> parseOutput(String json) {
+    if (json == null) {
+      return null;
+    }
+    try {
+      return MAPPER.readValue(json, Map.class);
+    } catch (Exception e) {
+      return null;
+    }
   }
 
   /** Enqueues a run: persists a PENDING {@link WorkflowRun} and returns immediately. */
