@@ -65,6 +65,14 @@ public class WorkflowRunController {
     return ResponseEntity.ok(runs);
   }
 
+  @PostMapping("/runs/{runId}/nodes/{nodeId}/send")
+  public ResponseEntity<?> sendPendingMessages(
+      @PathVariable Long runId, @PathVariable String nodeId, Authentication authentication) {
+    Long userId = currentUser.requireUserId(authentication);
+    NodeRunLog updated = executionService.sendPendingMessages(runId, userId, nodeId);
+    return ResponseEntity.ok(nodeLog(updated));
+  }
+
   @GetMapping("/runs/{runId}")
   public ResponseEntity<?> runDetail(@PathVariable Long runId, Authentication authentication) {
     Long userId = currentUser.requireUserId(authentication);
