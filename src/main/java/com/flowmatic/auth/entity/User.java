@@ -41,6 +41,12 @@ public class User {
   @Column(nullable = false, updatable = false)
   private Instant createdAt;
 
+  // Lifetime count of workflow runs this user has ever enqueued. Nullable so it can be added to
+  // an already-populated table (no Flyway/backfill); a null read back means it predates this
+  // column and is treated as 0 everywhere it's read.
+  @Column(name = "workflow_run_count")
+  private Integer workflowRunCount;
+
   @PrePersist
   void onCreated() {
     this.createdAt = Instant.now();
@@ -48,5 +54,8 @@ public class User {
       this.role = Role.USER;
     }
     this.enabled = true;
+    if (this.workflowRunCount == null) {
+      this.workflowRunCount = 0;
+    }
   }
 }

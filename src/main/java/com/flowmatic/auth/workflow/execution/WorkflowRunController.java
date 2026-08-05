@@ -33,18 +33,27 @@ public class WorkflowRunController {
   private final WorkflowRunRepository workflowRunRepository;
   private final NodeRunLogRepository nodeRunLogRepository;
   private final CurrentUser currentUser;
+  private final WorkflowRunQuotaService quotaService;
 
   public WorkflowRunController(
       WorkflowExecutionService executionService,
       WorkflowRepository workflowRepository,
       WorkflowRunRepository workflowRunRepository,
       NodeRunLogRepository nodeRunLogRepository,
-      CurrentUser currentUser) {
+      CurrentUser currentUser,
+      WorkflowRunQuotaService quotaService) {
     this.executionService = executionService;
     this.workflowRepository = workflowRepository;
     this.workflowRunRepository = workflowRunRepository;
     this.nodeRunLogRepository = nodeRunLogRepository;
     this.currentUser = currentUser;
+    this.quotaService = quotaService;
+  }
+
+  @GetMapping("/runs/usage")
+  public ResponseEntity<WorkflowRunUsageDTO> usage(Authentication authentication) {
+    Long userId = currentUser.requireUserId(authentication);
+    return ResponseEntity.ok(quotaService.usage(userId));
   }
 
   @PostMapping("/{id}/run")

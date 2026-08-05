@@ -49,18 +49,21 @@ public class WorkflowExecutionService {
   private final NodeRunLogRepository nodeRunLogRepository;
   private final NodeExecutorRegistry executorRegistry;
   private final EmailOutputNodeExecutor emailOutputNodeExecutor;
+  private final WorkflowRunQuotaService quotaService;
 
   public WorkflowExecutionService(
       WorkflowRepository workflowRepository,
       WorkflowRunRepository workflowRunRepository,
       NodeRunLogRepository nodeRunLogRepository,
       NodeExecutorRegistry executorRegistry,
-      EmailOutputNodeExecutor emailOutputNodeExecutor) {
+      EmailOutputNodeExecutor emailOutputNodeExecutor,
+      WorkflowRunQuotaService quotaService) {
     this.workflowRepository = workflowRepository;
     this.workflowRunRepository = workflowRunRepository;
     this.nodeRunLogRepository = nodeRunLogRepository;
     this.executorRegistry = executorRegistry;
     this.emailOutputNodeExecutor = emailOutputNodeExecutor;
+    this.quotaService = quotaService;
   }
 
   /**
@@ -130,12 +133,18 @@ public class WorkflowExecutionService {
     }
   }
 
-  /** Enqueues a run: persists a PENDING {@link WorkflowRun} and returns immediately. */
+  /**
+   * Enqueues a run: persists a PENDING {@link WorkflowRun} and returns immediately.
+   *
+   * @throws ResponseStatusException 402 if the workflow's owner has hit their lifetime run cap
+   */
+  @Transactional
   public WorkflowRun enqueue(Long workflowId) {
     Workflow workflow =
         workflowRepository
             .findById(workflowId)
             .orElseThrow(() -> new IllegalArgumentException("Workflow not found: " + workflowId));
+    quotaService.enforceQuota(workflow.getUser().getId());
     return workflowRunRepository.save(
         WorkflowRun.builder().workflow(workflow).status(WorkflowRunStatus.PENDING).build());
   }
