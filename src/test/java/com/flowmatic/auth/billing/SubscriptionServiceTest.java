@@ -91,8 +91,7 @@ class SubscriptionServiceTest {
 
   @Test
   void upsertFromCheckoutUpdatesAnExistingRowOnResubscribe() {
-    Subscription existing =
-        subscription(SubscriptionStatus.CANCELED, SubscriptionPlan.ESSENTIALS);
+    Subscription existing = subscription(SubscriptionStatus.CANCELED, SubscriptionPlan.ESSENTIALS);
     when(subscriptionRepository.findByUserId(1L)).thenReturn(Optional.of(existing));
     Instant periodEnd = Instant.now();
 
@@ -108,7 +107,8 @@ class SubscriptionServiceTest {
   @Test
   void updateFromStripeSubscriptionUpdatesTheMatchingRow() {
     Subscription existing = subscription(SubscriptionStatus.ACTIVE, SubscriptionPlan.ESSENTIALS);
-    when(subscriptionRepository.findByStripeSubscriptionId("sub_9")).thenReturn(Optional.of(existing));
+    when(subscriptionRepository.findByStripeSubscriptionId("sub_9"))
+        .thenReturn(Optional.of(existing));
     Instant periodEnd = Instant.now();
 
     service.updateFromStripeSubscription(
@@ -133,7 +133,8 @@ class SubscriptionServiceTest {
   @Test
   void markCanceledSetsStatusToCanceled() {
     Subscription existing = subscription(SubscriptionStatus.ACTIVE, SubscriptionPlan.PRO);
-    when(subscriptionRepository.findByStripeSubscriptionId("sub_9")).thenReturn(Optional.of(existing));
+    when(subscriptionRepository.findByStripeSubscriptionId("sub_9"))
+        .thenReturn(Optional.of(existing));
 
     service.markCanceled("sub_9");
 
@@ -150,7 +151,8 @@ class SubscriptionServiceTest {
     verify(subscriptionRepository, never()).save(any());
   }
 
-  private static Subscription argThatSubscription(java.util.function.Predicate<Subscription> predicate) {
+  private static Subscription argThatSubscription(
+      java.util.function.Predicate<Subscription> predicate) {
     return org.mockito.ArgumentMatchers.argThat(predicate::test);
   }
 }
