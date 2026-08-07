@@ -8,9 +8,7 @@ import com.stripe.exception.StripeException;
 import jakarta.validation.Valid;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -58,18 +56,5 @@ public class BillingController {
       return ResponseEntity.badRequest().build();
     }
     return ResponseEntity.ok().build();
-  }
-
-  /**
-   * A malformed body (e.g. an unrecognized enum value for {@code plan}) fails during argument
-   * resolution, before the method body runs. In this Spring version {@code
-   * HttpMessageNotReadableException} doesn't implement {@code
-   * org.springframework.web.ErrorResponse}, so {@link
-   * com.flowmatic.auth.exception.GlobalExceptionHandler}'s catch-all would otherwise flatten it to
-   * a 500; handle it locally instead of widening that shared, app-wide fallback.
-   */
-  @ExceptionHandler(HttpMessageNotReadableException.class)
-  public ResponseEntity<?> handleMalformedBody(HttpMessageNotReadableException ex) {
-    return ResponseEntity.badRequest().build();
   }
 }
