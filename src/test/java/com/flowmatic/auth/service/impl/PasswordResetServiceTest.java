@@ -202,4 +202,25 @@ class PasswordResetServiceTest {
     verify(tokenRepository).delete(record);
     verify(userRepository, never()).save(any());
   }
+
+  @Test
+  void resetPasswordRejectsATokenWhoseUserNoLongerExistsAndDeletesIt() throws Exception {
+    String rawToken = "orphaned-token";
+    PasswordResetToken record =
+        PasswordResetToken.builder()
+            .id(4L)
+            .email("deleted-user@example.com")
+            .tokenHash(sha256(rawToken))
+            .expiresAt(Instant.now().plus(10, ChronoUnit.MINUTES))
+            .createdAt(Instant.now())
+            .build();
+    when(tokenRepository.findByTokenHash(sha256(rawToken))).thenReturn(Optional.of(record));
+    when(userRepository.findByEmail("deleted-user@example.com")).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.resetPassword(resetRequest(rawToken, "newPassword123")))
+        .isInstanceOf(InvalidResetTokenException.class);
+
+    verify(tokenRepository).delete(record);
+    verify(userRepository, never()).save(any());
+  }
 }

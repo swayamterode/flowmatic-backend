@@ -109,7 +109,11 @@ public class PasswordResetServiceImpl implements PasswordResetService {
     User user =
         userRepository
             .findByEmail(token.getEmail())
-            .orElseThrow(() -> new InvalidResetTokenException("Invalid or expired reset link."));
+            .orElseThrow(
+                () -> {
+                  tokenRepository.delete(token);
+                  return new InvalidResetTokenException("Invalid or expired reset link.");
+                });
 
     user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
     userRepository.save(user);
