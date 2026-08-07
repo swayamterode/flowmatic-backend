@@ -25,9 +25,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 /**
- * Exercises {@code GET /api/workflows/runs/usage} and the 402 path on {@code POST /run}. Each
- * test uses its own user email — the lifetime run count persists across the whole test class
- * (no per-method rollback), so sharing one user would leak run counts between tests.
+ * Exercises {@code GET /api/workflows/runs/usage} and the 402 path on {@code POST /run}. Each test
+ * uses its own user email — the lifetime run count persists across the whole test class (no
+ * per-method rollback), so sharing one user would leak run counts between tests.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -55,7 +55,10 @@ class WorkflowRunUsageEndpointIntegrationTest {
 
   private Workflow seedWorkflow(User owner) throws Exception {
     Map<String, Object> graph =
-        Map.of("nodes", List.of(Map.of("id", "t", "type", "TRIGGER", "data", Map.of())), "edges",
+        Map.of(
+            "nodes",
+            List.of(Map.of("id", "t", "type", "TRIGGER", "data", Map.of())),
+            "edges",
             List.of());
     return workflowRepository.save(
         Workflow.builder()
@@ -80,12 +83,25 @@ class WorkflowRunUsageEndpointIntegrationTest {
   }
 
   @Test
+  @WithMockUser(username = "null-plan@example.com")
+  void usageEndpointReturnsNullPlanForAFreeTierUser() throws Exception {
+    seedOwner("null-plan@example.com");
+
+    mockMvc
+        .perform(get("/api/workflows/runs/usage"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.plan").doesNotExist());
+  }
+
+  @Test
   @WithMockUser(username = "tracks-usage@example.com")
   void usageEndpointTracksRunsAsTheyAreEnqueued() throws Exception {
     Workflow workflow = seedWorkflow(seedOwner("tracks-usage@example.com"));
 
     for (int i = 0; i < 3; i++) {
-      mockMvc.perform(post("/api/workflows/{id}/run", workflow.getId())).andExpect(status().isAccepted());
+      mockMvc
+          .perform(post("/api/workflows/{id}/run", workflow.getId()))
+          .andExpect(status().isAccepted());
     }
 
     mockMvc
@@ -101,7 +117,9 @@ class WorkflowRunUsageEndpointIntegrationTest {
     Workflow workflow = seedWorkflow(seedOwner("capped-endpoint@example.com"));
 
     for (int i = 0; i < 10; i++) {
-      mockMvc.perform(post("/api/workflows/{id}/run", workflow.getId())).andExpect(status().isAccepted());
+      mockMvc
+          .perform(post("/api/workflows/{id}/run", workflow.getId()))
+          .andExpect(status().isAccepted());
     }
 
     mockMvc

@@ -1,6 +1,7 @@
 package com.flowmatic.auth.exception;
 
 import com.flowmatic.auth.dto.ErrorResponse;
+import com.stripe.exception.StripeException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.stream.Collectors;
@@ -9,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -59,6 +61,14 @@ public class GlobalExceptionHandler {
     return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), req);
   }
 
+  /** Stripe is an upstream dependency; its failures are a gateway fault, not ours. */
+  @ExceptionHandler(StripeException.class)
+  public ResponseEntity<ErrorResponse> handleStripeException(
+      StripeException ex, HttpServletRequest req) {
+    log.error("Stripe API error on {} {}", req.getMethod(), req.getRequestURI(), ex);
+    return build(HttpStatus.BAD_GATEWAY, "Payment provider is temporarily unavailable", req);
+  }
+
   @ExceptionHandler(AccessDeniedException.class)
   public ResponseEntity<ErrorResponse> handleAccessDenied(
       AccessDeniedException ex, HttpServletRequest req) {
@@ -73,6 +83,16 @@ public class GlobalExceptionHandler {
             .map(FieldError::getDefaultMessage)
             .collect(Collectors.joining(", "));
     return build(HttpStatus.BAD_REQUEST, message, req);
+  }
+
+  /**
+   * Thrown when the request body fails to deserialize (e.g. an unrecognized enum value) — happens
+   * before the controller method runs, so it's a client error, not a server fault.
+   */
+  @ExceptionHandler(HttpMessageNotReadableException.class)
+  public ResponseEntity<ErrorResponse> handleMalformedBody(
+      HttpMessageNotReadableException ex, HttpServletRequest req) {
+    return build(HttpStatus.BAD_REQUEST, "Malformed request body", req);
   }
 
   @ExceptionHandler({MissingServletRequestPartException.class, MultipartException.class})

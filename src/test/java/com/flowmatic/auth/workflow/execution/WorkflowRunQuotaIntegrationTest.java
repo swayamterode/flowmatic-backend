@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.flowmatic.auth.billing.entity.Subscription;
+import com.flowmatic.auth.billing.entity.SubscriptionPlan;
+import com.flowmatic.auth.billing.entity.SubscriptionStatus;
+import com.flowmatic.auth.billing.repository.SubscriptionRepository;
 import com.flowmatic.auth.entity.Role;
 import com.flowmatic.auth.entity.User;
 import com.flowmatic.auth.repository.UserRepository;
@@ -12,6 +16,7 @@ import com.flowmatic.auth.workflow.entity.WorkflowRun;
 import com.flowmatic.auth.workflow.entity.WorkflowRunStatus;
 import com.flowmatic.auth.workflow.repository.WorkflowRepository;
 import com.flowmatic.auth.workflow.repository.WorkflowRunRepository;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -24,8 +29,8 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Each user gets a lifetime cap of 10 workflow runs, enforced the moment a run is enqueued.
- * ADMIN users are exempt, and the cap can never be reset by deleting workflow history.
+ * Each user gets a lifetime cap of 10 workflow runs, enforced the moment a run is enqueued. ADMIN
+ * users are exempt, and the cap can never be reset by deleting workflow history.
  */
 @SpringBootTest
 @ActiveProfiles("test")
@@ -38,6 +43,7 @@ class WorkflowRunQuotaIntegrationTest {
   @Autowired WorkflowRunRepository workflowRunRepository;
   @Autowired WorkflowExecutionService executionService;
   @Autowired WorkflowRunQuotaService quotaService;
+  @Autowired SubscriptionRepository subscriptionRepository;
 
   private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -54,7 +60,10 @@ class WorkflowRunQuotaIntegrationTest {
 
   private Workflow saveWorkflow(User user, String name) {
     Map<String, Object> graph =
-        Map.of("nodes", List.of(Map.of("id", "t", "type", "TRIGGER", "data", Map.of())), "edges",
+        Map.of(
+            "nodes",
+            List.of(Map.of("id", "t", "type", "TRIGGER", "data", Map.of())),
+            "edges",
             List.of());
     try {
       return workflowRepository.save(
@@ -66,6 +75,18 @@ class WorkflowRunQuotaIntegrationTest {
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
+  }
+
+  private void giveSubscription(User user, SubscriptionPlan plan, SubscriptionStatus status) {
+    subscriptionRepository.save(
+        Subscription.builder()
+            .user(user)
+            .stripeCustomerId("cus_test")
+            .stripeSubscriptionId("sub_test_" + user.getId())
+            .plan(plan)
+            .status(status)
+            .currentPeriodEnd(Instant.now().plusSeconds(3600))
+            .build());
   }
 
   @Test
@@ -173,5 +194,72 @@ class WorkflowRunQuotaIntegrationTest {
     assertThat(usage.unlimited()).isTrue();
     assertThat(usage.limit()).isNull();
     assertThat(usage.remaining()).isNull();
+  }
+
+  @Test
+  void essentialsSubscriberIsCappedAtTheEssentialsLimitNotTheFreeLimit() {
+    User user = newUser("essentials@example.com", Role.USER);
+    giveSubscription(user, SubscriptionPlan.ESSENTIALS, SubscriptionStatus.ACTIVE);
+    Workflow workflow = saveWorkflow(user, "essentials-wf");
+
+    for (int i = 0; i < 100; i++) {
+      WorkflowRun run = executionService.enqueue(workflow.getId());
+      assertThat(run.getStatus()).isEqualTo(WorkflowRunStatus.PENDING);
+    }
+
+    assertThatThrownBy(() -> executionService.enqueue(workflow.getId()))
+        .isInstanceOf(ResponseStatusException.class)
+        .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+        .isEqualTo(HttpStatus.PAYMENT_REQUIRED);
+  }
+
+  @Test
+  void activeEnterpriseSubscriberIsExemptLikeAdmin() {
+    User user = newUser("enterprise@example.com", Role.USER);
+    giveSubscription(user, SubscriptionPlan.ENTERPRISE, SubscriptionStatus.ACTIVE);
+    Workflow workflow = saveWorkflow(user, "enterprise-wf");
+
+    for (int i = 0; i < 15; i++) {
+      WorkflowRun run = executionService.enqueue(workflow.getId());
+      assertThat(run.getStatus()).isEqualTo(WorkflowRunStatus.PENDING);
+    }
+
+    assertThat(workflowRunRepository.findByWorkflow_IdOrderByStartedAtDesc(workflow.getId()))
+        .hasSize(15);
+  }
+
+  @Test
+  void canceledEssentialsSubscriberWhoUsedMoreThanTheFreeLimitIsImmediatelyBlocked() {
+    User user = newUser("canceled-essentials@example.com", Role.USER);
+    giveSubscription(user, SubscriptionPlan.ESSENTIALS, SubscriptionStatus.ACTIVE);
+    Workflow workflow = saveWorkflow(user, "canceled-essentials-wf");
+
+    for (int i = 0; i < 20; i++) {
+      executionService.enqueue(workflow.getId());
+    }
+
+    subscriptionRepository
+        .findByUserId(user.getId())
+        .ifPresent(
+            s -> {
+              s.setStatus(SubscriptionStatus.CANCELED);
+              subscriptionRepository.save(s);
+            });
+
+    assertThatThrownBy(() -> executionService.enqueue(workflow.getId()))
+        .isInstanceOf(ResponseStatusException.class)
+        .extracting(ex -> ((ResponseStatusException) ex).getStatusCode())
+        .isEqualTo(HttpStatus.PAYMENT_REQUIRED);
+  }
+
+  @Test
+  void usageReportsTheActivePlanName() {
+    User user = newUser("usage-plan@example.com", Role.USER);
+    giveSubscription(user, SubscriptionPlan.PRO, SubscriptionStatus.ACTIVE);
+
+    WorkflowRunUsageDTO usage = quotaService.usage(user.getId());
+
+    assertThat(usage.plan()).isEqualTo("PRO");
+    assertThat(usage.limit()).isEqualTo(1000);
   }
 }
