@@ -29,7 +29,7 @@ public class EmailServiceImpl implements EmailService {
   @Value("${app.otp.expiry-minutes}")
   private long expiryMinutes;
 
-  @Value("${app.password-reset.expiry-minutes}")
+  @Value("${app.password-reset.expiry-minutes:30}")
   private long resetLinkExpiryMinutes;
 
   // @Async so SMTP latency never blocks the HTTP request thread.
