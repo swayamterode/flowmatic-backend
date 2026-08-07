@@ -73,17 +73,21 @@ class StripeWebhookServiceTest {
   }
 
   private Event subscriptionEvent(String type) {
+    return subscriptionEvent(type, "2026-07-29.dahlia");
+  }
+
+  private Event subscriptionEvent(String type, String apiVersion) {
     String json =
         """
         {
           "id": "evt_2",
           "object": "event",
-          "api_version": "2026-07-29.dahlia",
+          "api_version": "%s",
           "type": "%s",
           "data": { "object": %s }
         }
         """
-            .formatted(type, SUBSCRIPTION_JSON);
+            .formatted(apiVersion, type, SUBSCRIPTION_JSON);
     return ApiResource.GSON.fromJson(json, Event.class);
   }
 
@@ -109,6 +113,38 @@ class StripeWebhookServiceTest {
     verify(subscriptionService)
         .upsertFromCheckout(
             42L, SubscriptionPlan.PRO, "cus_123", "sub_123", Instant.ofEpochSecond(1700000000));
+  }
+
+  @Test
+  void checkoutSessionCompletedIgnoresANonSubscriptionCheckoutSession() throws Exception {
+    // checkout.session.completed fires for every Checkout Session on the whole Stripe account —
+    // e.g. a Payment Link, a one-time payment, or `stripe trigger checkout.session.completed` —
+    // not just the subscription-mode sessions this app's own StripeCheckoutService creates.
+    String json =
+        """
+        {
+          "id": "evt_4",
+          "object": "event",
+          "api_version": "2026-07-29.dahlia",
+          "type": "checkout.session.completed",
+          "data": {
+            "object": {
+              "id": "cs_456",
+              "object": "checkout.session",
+              "mode": "payment",
+              "client_reference_id": null,
+              "customer": "cus_123",
+              "subscription": null
+            }
+          }
+        }
+        """;
+    when(stripeClient.constructEvent(anyString(), anyString(), eq("whsec_test")))
+        .thenReturn(ApiResource.GSON.fromJson(json, Event.class));
+
+    service.handleWebhook("payload", "sig");
+
+    verify(subscriptionService, never()).upsertFromCheckout(any(), any(), any(), any(), any());
   }
 
   @Test
@@ -144,6 +180,20 @@ class StripeWebhookServiceTest {
   void subscriptionDeletedMarksTheRowCanceled() throws Exception {
     when(stripeClient.constructEvent(anyString(), anyString(), eq("whsec_test")))
         .thenReturn(subscriptionEvent("customer.subscription.deleted"));
+
+    service.handleWebhook("payload", "sig");
+
+    verify(subscriptionService).markCanceled("sub_123");
+  }
+
+  @Test
+  void subscriptionDeletedWithMismatchedApiVersionStillDeserializesViaFallback() throws Exception {
+    // Stripe stamps every real webhook event with the *account's* configured api_version, not
+    // the SDK's compiled-in Stripe.API_VERSION. getObject() is empty on any mismatch; the
+    // deserializeUnsafe() fallback must still succeed so the webhook lifecycle isn't broken
+    // against real Stripe traffic.
+    when(stripeClient.constructEvent(anyString(), anyString(), eq("whsec_test")))
+        .thenReturn(subscriptionEvent("customer.subscription.deleted", "2020-08-27"));
 
     service.handleWebhook("payload", "sig");
 

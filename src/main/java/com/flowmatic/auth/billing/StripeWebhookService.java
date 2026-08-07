@@ -3,9 +3,12 @@ package com.flowmatic.auth.billing;
 import com.flowmatic.auth.billing.entity.SubscriptionPlan;
 import com.flowmatic.auth.billing.entity.SubscriptionStatus;
 import com.stripe.StripeClient;
+import com.stripe.exception.EventDataObjectDeserializationException;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
 import com.stripe.model.Event;
+import com.stripe.model.EventDataObjectDeserializer;
+import com.stripe.model.StripeObject;
 import com.stripe.model.Subscription;
 import com.stripe.model.checkout.Session;
 import java.time.Instant;
@@ -49,14 +52,30 @@ public class StripeWebhookService {
   }
 
   private void handleCheckoutCompleted(Event event) throws StripeException {
-    Session session =
-        (Session)
-            event
-                .getDataObjectDeserializer()
-                .getObject()
-                .orElseThrow(
-                    () -> new IllegalStateException("Unable to deserialize " + event.getId()));
-    Long userId = Long.valueOf(session.getClientReferenceId());
+    Session session = (Session) dataObject(event);
+    if (!"subscription".equals(session.getMode())
+        || session.getClientReferenceId() == null
+        || session.getSubscription() == null) {
+      log.warn(
+          "Ignoring checkout.session.completed for session {} — not a subscription checkout"
+              + " created by this app (mode={}, clientReferenceId={}, subscription={})",
+          session.getId(),
+          session.getMode(),
+          session.getClientReferenceId(),
+          session.getSubscription());
+      return;
+    }
+    Long userId;
+    try {
+      userId = Long.valueOf(session.getClientReferenceId());
+    } catch (NumberFormatException e) {
+      log.warn(
+          "Ignoring checkout.session.completed for session {} — clientReferenceId {} is not a"
+              + " valid user id",
+          session.getId(),
+          session.getClientReferenceId());
+      return;
+    }
     Subscription subscription =
         stripeClient.v1().subscriptions().retrieve(session.getSubscription());
 
@@ -93,11 +112,27 @@ public class StripeWebhookService {
   }
 
   private static Subscription subscriptionObject(Event event) {
-    return (Subscription)
-        event
-            .getDataObjectDeserializer()
-            .getObject()
-            .orElseThrow(() -> new IllegalStateException("Unable to deserialize " + event.getId()));
+    return (Subscription) dataObject(event);
+  }
+
+  /**
+   * {@link EventDataObjectDeserializer#getObject()} returns empty whenever the event's {@code
+   * api_version} doesn't exactly match the SDK's compiled-in version — which is the normal case in
+   * production, since Stripe stamps events with the account's configured API version, not the
+   * SDK's. Fall back to {@code deserializeUnsafe()}, Stripe's documented pattern for this case.
+   */
+  private static StripeObject dataObject(Event event) {
+    EventDataObjectDeserializer deserializer = event.getDataObjectDeserializer();
+    return deserializer
+        .getObject()
+        .orElseGet(
+            () -> {
+              try {
+                return deserializer.deserializeUnsafe();
+              } catch (EventDataObjectDeserializationException e) {
+                throw new IllegalStateException("Unable to deserialize " + event.getId(), e);
+              }
+            });
   }
 
   private Optional<SubscriptionPlan> planFor(Subscription subscription) {

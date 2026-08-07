@@ -10,6 +10,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /** Reads and writes each user's {@link Subscription}, kept in sync via Stripe webhooks. */
 @Service
@@ -42,6 +43,7 @@ public class SubscriptionService {
   }
 
   /** Called after {@code checkout.session.completed}: creates or reactivates the user's row. */
+  @Transactional
   public void upsertFromCheckout(
       Long userId,
       SubscriptionPlan plan,
@@ -62,6 +64,7 @@ public class SubscriptionService {
   }
 
   /** Called on {@code customer.subscription.updated} (renewals, {@code active -> past_due}). */
+  @Transactional
   public void updateFromStripeSubscription(
       String stripeSubscriptionId,
       SubscriptionStatus status,
@@ -83,6 +86,7 @@ public class SubscriptionService {
   }
 
   /** Called on {@code customer.subscription.deleted}. */
+  @Transactional
   public void markCanceled(String stripeSubscriptionId) {
     subscriptionRepository
         .findByStripeSubscriptionId(stripeSubscriptionId)

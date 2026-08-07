@@ -6,6 +6,7 @@ import com.flowmatic.auth.workflow.web.CurrentUser;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
 import jakarta.validation.Valid;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -48,10 +49,11 @@ public class BillingController {
    */
   @PostMapping("/webhook")
   public ResponseEntity<?> webhook(
-      @RequestBody String payload, @RequestHeader("Stripe-Signature") String sigHeader)
+      @RequestBody byte[] payload, @RequestHeader("Stripe-Signature") String sigHeader)
       throws StripeException {
+    String payloadString = new String(payload, StandardCharsets.UTF_8);
     try {
-      webhookService.handleWebhook(payload, sigHeader);
+      webhookService.handleWebhook(payloadString, sigHeader);
     } catch (SignatureVerificationException e) {
       return ResponseEntity.badRequest().build();
     }
