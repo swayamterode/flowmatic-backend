@@ -36,7 +36,9 @@ public class SecurityConfig {
     "/api/auth/verify-email",
     "/api/auth/resend-otp",
     // Google's OAuth redirect carries no JWT; the user is authenticated via the signed state param.
-    "/api/integrations/google/callback"
+    "/api/integrations/google/callback",
+    // Stripe is the caller here, authenticated by its request signature, not a JWT.
+    "/api/billing/webhook"
   };
 
   @Bean

@@ -1,6 +1,7 @@
 package com.flowmatic.auth.exception;
 
 import com.flowmatic.auth.dto.ErrorResponse;
+import com.stripe.exception.StripeException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;
 import java.util.stream.Collectors;
@@ -57,6 +58,14 @@ public class GlobalExceptionHandler {
   public ResponseEntity<ErrorResponse> handleOtpCooldown(
       OtpResendCooldownException ex, HttpServletRequest req) {
     return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), req);
+  }
+
+  /** Stripe is an upstream dependency; its failures are a gateway fault, not ours. */
+  @ExceptionHandler(StripeException.class)
+  public ResponseEntity<ErrorResponse> handleStripeException(
+      StripeException ex, HttpServletRequest req) {
+    log.error("Stripe API error on {} {}", req.getMethod(), req.getRequestURI(), ex);
+    return build(HttpStatus.BAD_GATEWAY, "Payment provider is temporarily unavailable", req);
   }
 
   @ExceptionHandler(AccessDeniedException.class)
