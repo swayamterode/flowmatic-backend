@@ -15,7 +15,11 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
-/** Aggregates {@link WorkflowRun} rows into per-UTC-day counts for the dashboard chart. */
+/**
+ * Aggregates {@link WorkflowRun} rows for the dashboard: per-UTC-day counts for the
+ * executions-over-time chart ({@link #executionsOverTime}), and fixed-window KPI stats for the
+ * summary cards ({@link #summary}).
+ */
 @Service
 public class DashboardService {
 
@@ -62,11 +66,16 @@ public class DashboardService {
     Instant todayStart = today.atStartOfDay(ZoneOffset.UTC).toInstant();
     Instant tomorrowStart = today.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
     Instant yesterdayStart = today.minusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+    // Clipped to the same elapsed-today offset so "today so far" is compared against the matching
+    // elapsed portion of yesterday, not the whole day -- otherwise the delta is systematically
+    // biased negative for as long as today remains partially elapsed (which is always, until
+    // 24:00).
+    Instant yesterdayElapsedEnd = yesterdayStart.plus(Duration.between(todayStart, now));
     Instant weekStart = today.minusDays(6).atStartOfDay(ZoneOffset.UTC).toInstant();
     Instant prevWeekStart = today.minusDays(13).atStartOfDay(ZoneOffset.UTC).toInstant();
 
     List<WorkflowRun> todayRuns = fetchWindow(userId, todayStart, tomorrowStart);
-    List<WorkflowRun> yesterdayRuns = fetchWindow(userId, yesterdayStart, todayStart);
+    List<WorkflowRun> yesterdayRuns = fetchWindow(userId, yesterdayStart, yesterdayElapsedEnd);
     List<WorkflowRun> weekRuns = fetchWindow(userId, weekStart, tomorrowStart);
     List<WorkflowRun> prevWeekRuns = fetchWindow(userId, prevWeekStart, weekStart);
 

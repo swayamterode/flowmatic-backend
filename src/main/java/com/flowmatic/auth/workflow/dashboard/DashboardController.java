@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
-/** Backs the dashboard's executions-over-time chart. */
+/** Backs the dashboard's executions-over-time chart and its KPI summary cards. */
 @RestController
 @RequestMapping("/api/dashboard")
 public class DashboardController {

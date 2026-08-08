@@ -36,6 +36,7 @@ class DashboardServiceSummaryTest {
   private static final Instant TODAY_START = Instant.parse("2026-08-08T00:00:00Z");
   private static final Instant TOMORROW_START = Instant.parse("2026-08-09T00:00:00Z");
   private static final Instant YESTERDAY_START = Instant.parse("2026-08-07T00:00:00Z");
+  private static final Instant YESTERDAY_ELAPSED_END = Instant.parse("2026-08-07T12:00:00Z");
   private static final Instant WEEK_START = Instant.parse("2026-08-02T00:00:00Z");
   private static final Instant PREV_WEEK_START = Instant.parse("2026-07-26T00:00:00Z");
 
@@ -45,7 +46,7 @@ class DashboardServiceSummaryTest {
       List<WorkflowRun> week,
       List<WorkflowRun> prevWeek) {
     given(workflowRunRepository, TODAY_START, TOMORROW_START, today);
-    given(workflowRunRepository, YESTERDAY_START, TODAY_START, yesterday);
+    given(workflowRunRepository, YESTERDAY_START, YESTERDAY_ELAPSED_END, yesterday);
     given(workflowRunRepository, WEEK_START, TOMORROW_START, week);
     given(workflowRunRepository, PREV_WEEK_START, WEEK_START, prevWeek);
   }
@@ -139,6 +140,8 @@ class DashboardServiceSummaryTest {
 
     assertThat(stats.medianRunTimeSeconds()).isEqualTo(4.0);
     assertThat(stats.medianRunTimeDeltaPct()).isEqualTo(100.0);
+    assertThat(stats.successRatePct())
+        .isEqualTo(100.0); // PENDING excluded from both numerator and denominator
   }
 
   @Test

@@ -1,7 +1,9 @@
 package com.flowmatic.auth.workflow.dashboard;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -14,6 +16,7 @@ import com.flowmatic.auth.workflow.entity.WorkflowRun;
 import com.flowmatic.auth.workflow.entity.WorkflowRunStatus;
 import com.flowmatic.auth.workflow.repository.WorkflowRepository;
 import com.flowmatic.auth.workflow.repository.WorkflowRunRepository;
+import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -105,6 +108,50 @@ class DashboardControllerSummaryIntegrationTest {
 
     SummaryStatsDTO stats = objectMapper.readValue(body, SummaryStatsDTO.class);
     assertThat(stats.successRatePct()).isEqualTo(75.0);
+  }
+
+  @Test
+  @WithMockUser(username = "summary-deltas@example.com")
+  void computesNonNullDeltasEndToEndAsRealJsonFields() throws Exception {
+    User owner = saveUser("summary-deltas@example.com");
+    Workflow workflow = saveWorkflow(owner);
+    Instant now = Instant.now();
+
+    // Today: 3 SUCCESS + 1 FAILED.
+    saveRun(workflow, WorkflowRunStatus.SUCCESS, now);
+    saveRun(workflow, WorkflowRunStatus.SUCCESS, now);
+    saveRun(workflow, WorkflowRunStatus.SUCCESS, now);
+    saveRun(workflow, WorkflowRunStatus.FAILED, now);
+
+    // Yesterday, within the elapsed-clipped window (just under 24h ago -- see DashboardService's
+    // yesterdayElapsedEnd): 1 SUCCESS + 1 FAILED.
+    Instant withinElapsedYesterday = now.minus(Duration.ofDays(1)).minus(Duration.ofMinutes(1));
+    saveRun(workflow, WorkflowRunStatus.SUCCESS, withinElapsedYesterday);
+    saveRun(workflow, WorkflowRunStatus.FAILED, withinElapsedYesterday);
+
+    // Preceding week: 1 SUCCESS with a non-zero duration, so the previous-week median is non-zero
+    // (a zero previous median would null out medianRunTimeDeltaPct by design -- guards a divide by
+    // zero, and this test wants to prove the non-null path instead).
+    Instant priorWeek = now.minus(Duration.ofDays(10));
+    workflowRunRepository.save(
+        WorkflowRun.builder()
+            .workflow(workflow)
+            .status(WorkflowRunStatus.SUCCESS)
+            .startedAt(priorWeek)
+            .completedAt(priorWeek.plusSeconds(6))
+            .build());
+
+    mockMvc
+        .perform(get("/api/dashboard/summary"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.executionsToday").value(4))
+        .andExpect(jsonPath("$.executionsTodayDeltaPct").value(100.0))
+        .andExpect(jsonPath("$.failedRuns").value(1))
+        .andExpect(jsonPath("$.failedRunsDeltaPct").value(0.0))
+        .andExpect(jsonPath("$.successRatePct", notNullValue()))
+        .andExpect(jsonPath("$.successRateDeltaPp", notNullValue()))
+        .andExpect(jsonPath("$.medianRunTimeSeconds", notNullValue()))
+        .andExpect(jsonPath("$.medianRunTimeDeltaPct", notNullValue()));
   }
 
   private User saveUser(String email) {
