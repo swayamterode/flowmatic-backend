@@ -28,4 +28,11 @@ public interface WorkflowRunRepository extends JpaRepository<WorkflowRun, Long> 
 
   /** A user's runs that have started, at or after {@code since} — for day-bucketing dashboards. */
   List<WorkflowRun> findByWorkflow_User_IdAndStartedAtGreaterThanEqual(Long userId, Instant since);
+
+  /**
+   * A user's runs that started within the half-open window {@code [from, to)} — for the dashboard's
+   * fixed-window KPI summary (today/yesterday, this-week/last-week).
+   */
+  List<WorkflowRun> findByWorkflow_User_IdAndStartedAtGreaterThanEqualAndStartedAtLessThan(
+      Long userId, Instant from, Instant to);
 }
