@@ -2,6 +2,7 @@ package com.flowmatic.auth.workflow.repository;
 
 import com.flowmatic.auth.workflow.entity.WorkflowRun;
 import com.flowmatic.auth.workflow.entity.WorkflowRunStatus;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -24,4 +25,7 @@ public interface WorkflowRunRepository extends JpaRepository<WorkflowRun, Long> 
   @Modifying
   @Query("delete from WorkflowRun r where r.workflow.id = :workflowId")
   int deleteByWorkflowId(@Param("workflowId") Long workflowId);
+
+  /** A user's runs that have started, at or after {@code since} — for day-bucketing dashboards. */
+  List<WorkflowRun> findByWorkflow_User_IdAndStartedAtGreaterThanEqual(Long userId, Instant since);
 }
