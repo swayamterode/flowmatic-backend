@@ -1,0 +1,74 @@
+{
+  "info": {
+    "name": "Dashboard",
+    "_postman_id": "d4a1f9c0-6b3e-4c2a-9e1a-2f8b3c5a7d10",
+    "description": "Executions-over-time endpoint for the dashboard chart (GET /api/dashboard/executions-over-time). Drag this 'Dashboard' folder from this temporary collection into your existing collection, then delete this one.\n\nRequires a `baseUrl` variable (e.g. http://localhost:8080) — set it on your collection if not already present. Auth is intentionally left unset on each request so it inherits whatever auth (Bearer token, etc.) your existing collection/folder already has configured.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Executions Over Time - 7 days",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/executions-over-time?days=7",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", "executions-over-time"],
+              "query": [{ "key": "days", "value": "7" }]
+            },
+            "description": "Zero-filled per-day execution counts for the last 7 days, oldest day first."
+          },
+          "response": []
+        },
+        {
+          "name": "Executions Over Time - 30 days (default)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/executions-over-time?days=30",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", "executions-over-time"],
+              "query": [{ "key": "days", "value": "30" }]
+            },
+            "description": "days=30 is also the default if the query param is omitted entirely."
+          },
+          "response": []
+        },
+        {
+          "name": "Executions Over Time - 60 days",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/executions-over-time?days=60",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", "executions-over-time"],
+              "query": [{ "key": "days", "value": "60" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Executions Over Time - Invalid days (expect 400)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/dashboard/executions-over-time?days=14",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "dashboard", "executions-over-time"],
+              "query": [{ "key": "days", "value": "14" }]
+            },
+            "description": "days must be exactly 7, 30, or 60 — any other value returns 400 Bad Request."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
