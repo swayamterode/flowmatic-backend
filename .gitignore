@@ -37,3 +37,6 @@ build/
 
 ### Local secrets ###
 .env
+
+### Superpowers agent workspace ###
+.superpowers/
