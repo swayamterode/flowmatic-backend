@@ -1,6 +1,7 @@
 package com.flowmatic.auth.workflow.dashboard;
 
 import com.flowmatic.auth.workflow.dashboard.dto.ExecutionRowDTO;
+import com.flowmatic.auth.workflow.dashboard.dto.StatusBreakdownDTO;
 import com.flowmatic.auth.workflow.dashboard.dto.SummaryStatsDTO;
 import com.flowmatic.auth.workflow.entity.WorkflowRun;
 import com.flowmatic.auth.workflow.entity.WorkflowRunStatus;
@@ -147,5 +148,28 @@ public class DashboardService {
 
   private static Double ppDelta(Double current, Double previous) {
     return (current == null || previous == null) ? null : current - previous;
+  }
+
+  /**
+   * All 4 {@link WorkflowRunStatus} counts over the last 30 days, always exactly 4 entries in enum
+   * declaration order — for the dashboard's executions-by-status pie chart.
+   */
+  public List<StatusBreakdownDTO> executionsByStatus(Long userId, Instant now) {
+    LocalDate today = now.atZone(ZoneOffset.UTC).toLocalDate();
+    Instant since = today.minusDays(30).atStartOfDay(ZoneOffset.UTC).toInstant();
+
+    List<WorkflowRun> runs =
+        workflowRunRepository.findByWorkflow_User_IdAndStartedAtGreaterThanEqual(userId, since);
+
+    Map<WorkflowRunStatus, Long> countsByStatus = new HashMap<>();
+    for (WorkflowRun run : runs) {
+      countsByStatus.merge(run.getStatus(), 1L, Long::sum);
+    }
+
+    List<StatusBreakdownDTO> result = new ArrayList<>();
+    for (WorkflowRunStatus status : WorkflowRunStatus.values()) {
+      result.add(new StatusBreakdownDTO(status.name(), countsByStatus.getOrDefault(status, 0L)));
+    }
+    return result;
   }
 }

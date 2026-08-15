@@ -11,14 +11,15 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 
 /**
- * Loads {@code .env} (if present) as a low-priority property source, purely for local
- * development. Real environment variables — as injected by Render/Docker in deployed
- * environments, where no .env file exists — always take precedence.
+ * Loads {@code .env} (if present) as a low-priority property source, purely for local development.
+ * Real environment variables — as injected by Render/Docker in deployed environments, where no .env
+ * file exists — always take precedence.
  */
 public class DotenvEnvironmentPostProcessor implements EnvironmentPostProcessor {
 
   @Override
-  public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
+  public void postProcessEnvironment(
+      ConfigurableEnvironment environment, SpringApplication application) {
     Path envFile = Path.of(".env");
     if (!Files.isRegularFile(envFile)) {
       return;

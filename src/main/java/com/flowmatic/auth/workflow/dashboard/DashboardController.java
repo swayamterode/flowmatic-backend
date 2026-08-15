@@ -1,6 +1,7 @@
 package com.flowmatic.auth.workflow.dashboard;
 
 import com.flowmatic.auth.workflow.dashboard.dto.ExecutionRowDTO;
+import com.flowmatic.auth.workflow.dashboard.dto.StatusBreakdownDTO;
 import com.flowmatic.auth.workflow.dashboard.dto.SummaryStatsDTO;
 import com.flowmatic.auth.workflow.web.CurrentUser;
 import java.time.Instant;
@@ -45,5 +46,12 @@ public class DashboardController {
   public ResponseEntity<SummaryStatsDTO> summary(Authentication authentication) {
     Long userId = currentUser.requireUserId(authentication);
     return ResponseEntity.ok(dashboardService.summary(userId, Instant.now()));
+  }
+
+  @GetMapping("/executions-by-status")
+  public ResponseEntity<List<StatusBreakdownDTO>> executionsByStatus(
+      Authentication authentication) {
+    Long userId = currentUser.requireUserId(authentication);
+    return ResponseEntity.ok(dashboardService.executionsByStatus(userId, Instant.now()));
   }
 }
