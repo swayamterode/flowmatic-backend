@@ -44,17 +44,20 @@ This must be a separate working directory/branch from the current `feature/dashb
 
 - [ ] **Step 2: Bring the design spec and plan docs along**
 
-The spec and plan docs were already committed to `feature/dashboard-executions-by-status`:
-- `200745e` — `docs(ops): add design spec for Render keep-alive health check`
-- `f0fe85c` — `docs(ops): add implementation plan for Render keep-alive health check`
-
-Cherry-pick both into this new branch so the PR is self-contained:
+The spec and plan docs (and any later fixups to the plan doc itself) were already committed to
+`feature/dashboard-executions-by-status` under the `docs/superpowers/specs/` and
+`docs/superpowers/plans/` paths, before any `.github/workflows/` commit exists. Find and cherry-pick
+them in order, oldest first, so the PR is self-contained:
 
 ```bash
-git cherry-pick 200745e f0fe85c
+git log --reverse --format=%H origin/main..feature/dashboard-executions-by-status -- \
+  docs/superpowers/specs/2026-08-16-render-keep-alive-design.md \
+  docs/superpowers/plans/2026-08-16-render-keep-alive.md \
+  | xargs -n1 git cherry-pick
 ```
 
-If a cherry-pick reports "nothing to commit" (file already present via the `main` merge-base), skip it and continue with the next.
+If a cherry-pick reports "nothing to commit" (file already present via the `main` merge-base), run
+`git cherry-pick --skip` and continue with the next.
 
 - [ ] **Step 3: Write the workflow file**
 
