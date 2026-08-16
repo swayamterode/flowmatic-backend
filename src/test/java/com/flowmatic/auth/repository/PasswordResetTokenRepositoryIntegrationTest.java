@@ -3,12 +3,12 @@ package com.flowmatic.auth.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flowmatic.auth.entity.PasswordResetToken;
+import com.flowmatic.auth.service.impl.ResendEmailService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -16,7 +16,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @ActiveProfiles("test")
 class PasswordResetTokenRepositoryIntegrationTest {
 
-  @MockitoBean JavaMailSender mailSender;
+  @MockitoBean ResendEmailService resendEmailService;
 
   @Autowired PasswordResetTokenRepository repository;
 

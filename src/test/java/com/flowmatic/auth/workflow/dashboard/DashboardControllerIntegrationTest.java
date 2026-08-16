@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flowmatic.auth.entity.Role;
 import com.flowmatic.auth.entity.User;
 import com.flowmatic.auth.repository.UserRepository;
+import com.flowmatic.auth.service.impl.ResendEmailService;
 import com.flowmatic.auth.workflow.dashboard.dto.ExecutionRowDTO;
 import com.flowmatic.auth.workflow.entity.Workflow;
 import com.flowmatic.auth.workflow.entity.WorkflowRun;
@@ -20,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -31,7 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
 @ActiveProfiles("test")
 class DashboardControllerIntegrationTest {
 
-  @MockitoBean JavaMailSender mailSender;
+  @MockitoBean ResendEmailService resendEmailService;
 
   @Autowired MockMvc mockMvc;
   @Autowired UserRepository userRepository;

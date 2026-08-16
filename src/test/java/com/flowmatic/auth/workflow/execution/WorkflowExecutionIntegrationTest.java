@@ -12,6 +12,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flowmatic.auth.entity.Role;
 import com.flowmatic.auth.entity.User;
 import com.flowmatic.auth.repository.UserRepository;
+import com.flowmatic.auth.service.impl.ResendEmailService;
 import com.flowmatic.auth.workflow.entity.NodeRunLog;
 import com.flowmatic.auth.workflow.entity.NodeRunStatus;
 import com.flowmatic.auth.workflow.entity.Workflow;
@@ -32,8 +33,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -67,7 +66,7 @@ class WorkflowExecutionIntegrationTest {
     }
   }
 
-  @MockitoBean JavaMailSender mailSender;
+  @MockitoBean ResendEmailService resendEmailService;
 
   @Autowired UserRepository userRepository;
   @Autowired WorkflowRepository workflowRepository;
@@ -155,9 +154,15 @@ class WorkflowExecutionIntegrationTest {
     assertThat(((Number) readJson(byId.get("out").getOutputJson()).get("sent")).intValue())
         .isEqualTo(2);
 
-    var captor = org.mockito.ArgumentCaptor.forClass(SimpleMailMessage.class);
-    verify(mailSender, times(2)).send(captor.capture());
-    assertThat(captor.getAllValues().get(0).getText())
+    var bodyCaptor = org.mockito.ArgumentCaptor.forClass(String.class);
+    verify(resendEmailService, times(2))
+        .send(
+            anyString(),
+            anyString(),
+            anyString(),
+            bodyCaptor.capture(),
+            org.mockito.ArgumentMatchers.isNull());
+    assertThat(bodyCaptor.getAllValues().get(0))
         .isEqualTo("Alice Johnson, thanks for the great review! Enjoy SAVE20.");
   }
 
@@ -214,7 +219,13 @@ class WorkflowExecutionIntegrationTest {
     assertThat(byId.get("email").getStatus()).isEqualTo(NodeRunStatus.SUCCESS);
     // The false branch must be skipped (and its HTTP call never made).
     assertThat(byId.get("log").getStatus()).isEqualTo(NodeRunStatus.SKIPPED);
-    verify(mailSender, times(1)).send(org.mockito.ArgumentMatchers.any(SimpleMailMessage.class));
+    verify(resendEmailService, times(1))
+        .send(
+            anyString(),
+            anyString(),
+            anyString(),
+            anyString(),
+            org.mockito.ArgumentMatchers.isNull());
   }
 
   @Test

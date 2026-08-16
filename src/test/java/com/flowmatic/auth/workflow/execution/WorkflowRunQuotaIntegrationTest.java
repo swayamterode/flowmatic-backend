@@ -11,6 +11,7 @@ import com.flowmatic.auth.billing.repository.SubscriptionRepository;
 import com.flowmatic.auth.entity.Role;
 import com.flowmatic.auth.entity.User;
 import com.flowmatic.auth.repository.UserRepository;
+import com.flowmatic.auth.service.impl.ResendEmailService;
 import com.flowmatic.auth.workflow.entity.Workflow;
 import com.flowmatic.auth.workflow.entity.WorkflowRun;
 import com.flowmatic.auth.workflow.entity.WorkflowRunStatus;
@@ -23,7 +24,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpStatus;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.web.server.ResponseStatusException;
@@ -36,7 +36,7 @@ import org.springframework.web.server.ResponseStatusException;
 @ActiveProfiles("test")
 class WorkflowRunQuotaIntegrationTest {
 
-  @MockitoBean JavaMailSender mailSender;
+  @MockitoBean ResendEmailService resendEmailService;
 
   @Autowired UserRepository userRepository;
   @Autowired WorkflowRepository workflowRepository;
