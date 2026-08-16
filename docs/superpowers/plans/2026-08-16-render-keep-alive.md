@@ -14,6 +14,7 @@
 - Cron: `*/14 * * * *` (every 14 minutes, UTC, 24/7 — no active-hours window; confirmed with user).
 - Target URL: `https://flowmatic-backend-3c9q.onrender.com/` (existing `WelcomeController`'s `GET /`, returns `{"status":"UP", ...}`).
 - curl flags: `--max-time 30 --retry 1 --retry-delay 5` (cold start can take up to ~30-60s; one retry before failing).
+- Note: the original `--max-time 30 --retry 1 --retry-delay 5` values above were superseded by a later fix based on live evidence (a cold-start run timed out under them) — widened in commit `4fd3c6d`, and further tuned in a subsequent review-fixes task. See the design spec's "What the job does" section for the current values.
 - Non-200 response (or curl failure) must fail the job (`exit 1`) — that's the alerting mechanism.
 - **This workflow must end up on `main`.** GitHub only triggers `schedule` events, and only lists a workflow for `workflow_dispatch`, from the repository's default branch (`main` here). A copy on a feature branch will never fire on its own.
 - **Do not build this on the currently checked-out branch** (`feature/dashboard-executions-by-status`) — it has unrelated uncommitted changes (`pom.xml`, several test files, a new `ResendEmailService.java`/`ResendEmailServiceTest.java`) that must not be touched or carried into this work. Use a fresh branch off `main` (isolated worktree if available via `superpowers:using-git-worktrees`) named `chore/render-keep-alive`.
