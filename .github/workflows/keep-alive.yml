@@ -1,5 +1,5 @@
 # Keeps the Render free-tier instance from sleeping (spins down after ~15 min
-# idle) by pinging it every 14 minutes, 24/7. See
+# idle) by pinging it every 10 minutes, 24/7. See
 # docs/superpowers/specs/2026-08-16-render-keep-alive-design.md for the
 # free-tier trade-offs this accepts (Render's 750 free instance-hours/month,
 # GitHub's 60-day auto-disable for inactive repos).
@@ -7,17 +7,20 @@ name: Render Keep-Alive
 
 on:
   schedule:
-    - cron: "*/14 * * * *"
+    - cron: "*/10 * * * *"
   workflow_dispatch: {}
+
+permissions: {}
 
 jobs:
   ping:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Ping health endpoint
         run: |
-          status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 90 --retry 2 --retry-delay 15 \
-            https://flowmatic-backend-3c9q.onrender.com/ || echo 000)
+          status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 90 --retry 2 --retry-delay 15 --retry-all-errors \
+            https://flowmatic-backend-3c9q.onrender.com/ || true)
           echo "Response status: $status"
           if [ "$status" != "200" ]; then
             echo "Health check failed with status $status"
