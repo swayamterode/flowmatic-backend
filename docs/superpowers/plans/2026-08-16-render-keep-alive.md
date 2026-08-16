@@ -42,15 +42,19 @@ cd .worktrees/chore-render-keep-alive
 
 This must be a separate working directory/branch from the current `feature/dashboard-executions-by-status` checkout — do not touch that checkout's uncommitted files.
 
-- [ ] **Step 2: Bring the design spec along**
+- [ ] **Step 2: Bring the design spec and plan docs along**
 
-The spec doc was already committed to `feature/dashboard-executions-by-status` at commit `200745e` (`docs(ops): add design spec for Render keep-alive health check`). Cherry-pick it into this new branch so the PR is self-contained:
+The spec and plan docs were already committed to `feature/dashboard-executions-by-status`:
+- `200745e` — `docs(ops): add design spec for Render keep-alive health check`
+- `f0fe85c` — `docs(ops): add implementation plan for Render keep-alive health check`
+
+Cherry-pick both into this new branch so the PR is self-contained:
 
 ```bash
-git cherry-pick 200745e
+git cherry-pick 200745e f0fe85c
 ```
 
-If the cherry-pick reports "nothing to commit" (file already present via the `main` merge-base), skip this step.
+If a cherry-pick reports "nothing to commit" (file already present via the `main` merge-base), skip it and continue with the next.
 
 - [ ] **Step 3: Write the workflow file**
 
