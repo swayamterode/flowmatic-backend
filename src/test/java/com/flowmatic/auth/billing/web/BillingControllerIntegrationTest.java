@@ -17,6 +17,7 @@ import com.flowmatic.auth.billing.entity.SubscriptionPlan;
 import com.flowmatic.auth.entity.Role;
 import com.flowmatic.auth.entity.User;
 import com.flowmatic.auth.repository.UserRepository;
+import com.flowmatic.auth.service.impl.ResendEmailService;
 import com.stripe.exception.ApiConnectionException;
 import com.stripe.exception.SignatureVerificationException;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +26,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -39,7 +39,7 @@ class BillingControllerIntegrationTest {
 
   private static final String CALLER = "billing-caller@example.com";
 
-  @MockitoBean JavaMailSender mailSender;
+  @MockitoBean ResendEmailService resendEmailService;
   @MockitoBean StripeCheckoutService checkoutService;
   @MockitoBean StripeWebhookService webhookService;
 

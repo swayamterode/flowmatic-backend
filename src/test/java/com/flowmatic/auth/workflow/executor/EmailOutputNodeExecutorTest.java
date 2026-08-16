@@ -1,14 +1,16 @@
 package com.flowmatic.auth.workflow.executor;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 
+import com.flowmatic.auth.service.impl.ResendEmailService;
 import com.flowmatic.auth.workflow.entity.NodeType;
 import com.flowmatic.auth.workflow.execution.NodeExecutionContext;
 import com.flowmatic.auth.workflow.execution.NodeExecutionResult;
@@ -18,15 +20,14 @@ import java.util.Map;
 import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
-import org.springframework.mail.MailSendException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.web.client.RestClientException;
 
 class EmailOutputNodeExecutorTest {
 
-  private final JavaMailSender mailSender = mock(JavaMailSender.class);
+  private final ResendEmailService resendEmailService = mock(ResendEmailService.class);
   private final EmailOutputNodeExecutor executor =
-      new EmailOutputNodeExecutor(mailSender, "no-reply@flowmatic.com", new TemplateResolver());
+      new EmailOutputNodeExecutor(
+          resendEmailService, "no-reply@flowmatic.com", new TemplateResolver());
 
   private Map<String, Object> crmContext() {
     return Map.of(
@@ -60,13 +61,21 @@ class EmailOutputNodeExecutorTest {
     assertThat(result.isSuccess()).isTrue();
     assertThat(result.getOutput()).containsEntry("sent", 2);
 
-    ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
-    verify(mailSender, times(2)).send(captor.capture());
-    List<SimpleMailMessage> messages = captor.getAllValues();
-    assertThat(messages.get(0).getTo()).containsExactly("alice@example.com");
-    assertThat(messages.get(0).getSubject()).isEqualTo("Hi Alice");
-    assertThat(messages.get(0).getText()).isEqualTo("Alice, enjoy 20% off with SAVE20");
-    assertThat(messages.get(1).getText()).isEqualTo("Bob, enjoy 20% off with SAVE20");
+    ArgumentCaptor<String> toCaptor = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<String> subjectCaptor = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+    verify(resendEmailService, times(2))
+        .send(
+            anyString(),
+            toCaptor.capture(),
+            subjectCaptor.capture(),
+            bodyCaptor.capture(),
+            isNull());
+
+    assertThat(toCaptor.getAllValues()).containsExactly("alice@example.com", "bob@example.com");
+    assertThat(subjectCaptor.getAllValues()).containsExactly("Hi Alice", "Hi Bob");
+    assertThat(bodyCaptor.getAllValues())
+        .containsExactly("Alice, enjoy 20% off with SAVE20", "Bob, enjoy 20% off with SAVE20");
   }
 
   @Test
@@ -80,20 +89,15 @@ class EmailOutputNodeExecutorTest {
 
     executor.execute(ctx);
 
-    ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
-    verify(mailSender).send(captor.capture());
-    assertThat(captor.getValue().getTo()).containsExactly("ops@example.com");
-    assertThat(captor.getValue().getSubject()).isEqualTo("Report");
+    verify(resendEmailService)
+        .send(anyString(), eq("ops@example.com"), eq("Report"), anyString(), isNull());
   }
 
   @Test
   void oneFailedSendDoesNotAbortTheBatch() {
-    doThrow(new MailSendException("smtp down"))
-        .when(mailSender)
-        .send(
-            argThat(
-                (SimpleMailMessage m) ->
-                    m != null && m.getTo() != null && "bob@example.com".equals(m.getTo()[0])));
+    doThrow(new RestClientException("resend down"))
+        .when(resendEmailService)
+        .send(anyString(), eq("bob@example.com"), anyString(), anyString(), isNull());
 
     NodeExecutionResult result =
         executor.execute(
@@ -114,7 +118,8 @@ class EmailOutputNodeExecutorTest {
     @SuppressWarnings("unchecked")
     List<String> failed = (List<String>) result.getOutput().get("failed");
     assertThat(failed).containsExactly("bob@example.com");
-    verify(mailSender, times(2)).send(any(SimpleMailMessage.class));
+    verify(resendEmailService, times(2))
+        .send(anyString(), anyString(), anyString(), anyString(), isNull());
   }
 
   /** The per-message record of what actually went out, added by Change 1. */
@@ -157,12 +162,9 @@ class EmailOutputNodeExecutorTest {
 
   @Test
   void failedMessageIsRecordedWithItsErrorAndTheBatchStillCompletes() {
-    doThrow(new MailSendException("smtp down"))
-        .when(mailSender)
-        .send(
-            argThat(
-                (SimpleMailMessage m) ->
-                    m != null && m.getTo() != null && "bob@example.com".equals(m.getTo()[0])));
+    doThrow(new RestClientException("resend down"))
+        .when(resendEmailService)
+        .send(anyString(), eq("bob@example.com"), anyString(), anyString(), isNull());
 
     NodeExecutionResult result =
         executor.execute(
@@ -188,7 +190,7 @@ class EmailOutputNodeExecutorTest {
         .containsEntry("subject", "Hi Bob")
         .containsEntry("body", "enjoy 20% off with SAVE20")
         .containsEntry("status", "FAILED");
-    assertThat((String) recorded(result).get(1).get("error")).contains("smtp down");
+    assertThat((String) recorded(result).get(1).get("error")).contains("resend down");
   }
 
   @Test
@@ -235,9 +237,10 @@ class EmailOutputNodeExecutorTest {
     assertThat(recorded(result).get(0)).containsEntry("bodyTruncated", true);
 
     // The cap bounds the run log only — the recipient still gets the whole thing.
-    ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
-    verify(mailSender).send(captor.capture());
-    assertThat(captor.getValue().getText()).hasSize(2500);
+    ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+    verify(resendEmailService)
+        .send(anyString(), anyString(), anyString(), bodyCaptor.capture(), isNull());
+    assertThat(bodyCaptor.getValue()).hasSize(2500);
   }
 
   @Test
@@ -266,7 +269,8 @@ class EmailOutputNodeExecutorTest {
         .containsEntry("messagesTruncated", true)
         .containsEntry("sent", 205)
         .containsEntry("total", 205);
-    verify(mailSender, times(205)).send(any(SimpleMailMessage.class));
+    verify(resendEmailService, times(205))
+        .send(anyString(), anyString(), anyString(), anyString(), isNull());
   }
 
   @Test
@@ -287,7 +291,7 @@ class EmailOutputNodeExecutorTest {
                 .build());
 
     assertThat(result.isSuccess()).isTrue();
-    verify(mailSender, never()).send(any(SimpleMailMessage.class));
+    verifyNoInteractions(resendEmailService);
     assertThat(result.getOutput())
         .containsEntry("sendMode", "manual")
         .containsEntry("sent", 0)
@@ -358,20 +362,17 @@ class EmailOutputNodeExecutorTest {
     // Settled entries match the pre-existing (Change 1) shape — no leftover "from" field.
     assertThat(messages.get(0)).doesNotContainKey("from");
 
-    ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
-    verify(mailSender, times(2)).send(captor.capture());
-    assertThat(captor.getAllValues().get(0).getText())
-        .isEqualTo("Alice, enjoy 20% off with SAVE20");
+    ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+    verify(resendEmailService, times(2))
+        .send(anyString(), anyString(), anyString(), bodyCaptor.capture(), isNull());
+    assertThat(bodyCaptor.getAllValues().get(0)).isEqualTo("Alice, enjoy 20% off with SAVE20");
   }
 
   @Test
   void sendPendingHandlesAPartialFailure() {
-    doThrow(new MailSendException("smtp down"))
-        .when(mailSender)
-        .send(
-            argThat(
-                (SimpleMailMessage m) ->
-                    m != null && m.getTo() != null && "bob@example.com".equals(m.getTo()[0])));
+    doThrow(new RestClientException("resend down"))
+        .when(resendEmailService)
+        .send(anyString(), eq("bob@example.com"), anyString(), anyString(), isNull());
 
     NodeExecutionResult held =
         executor.execute(
@@ -397,7 +398,7 @@ class EmailOutputNodeExecutorTest {
     @SuppressWarnings("unchecked")
     List<Map<String, Object>> messages = (List<Map<String, Object>>) settled.get("messages");
     assertThat(messages.get(1)).containsEntry("status", "FAILED");
-    assertThat((String) messages.get(1).get("error")).contains("smtp down");
+    assertThat((String) messages.get(1).get("error")).contains("resend down");
   }
 
   @Test
@@ -422,7 +423,8 @@ class EmailOutputNodeExecutorTest {
 
     assertThat(secondPass).containsEntry("sent", 2).containsEntry("total", 2);
     // Not 4 — the second pass found nothing PENDING left and resent nothing.
-    verify(mailSender, times(2)).send(any(SimpleMailMessage.class));
+    verify(resendEmailService, times(2))
+        .send(anyString(), anyString(), anyString(), anyString(), isNull());
   }
 
   @Test
@@ -448,9 +450,10 @@ class EmailOutputNodeExecutorTest {
     assertThat((String) messages.get(0).get("body")).hasSize(2000);
     assertThat(messages.get(0)).containsEntry("bodyTruncated", true);
 
-    ArgumentCaptor<SimpleMailMessage> captor = ArgumentCaptor.forClass(SimpleMailMessage.class);
-    verify(mailSender).send(captor.capture());
-    assertThat(captor.getValue().getText()).hasSize(2500); // sent in full despite the capped record
+    ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+    verify(resendEmailService)
+        .send(anyString(), anyString(), anyString(), bodyCaptor.capture(), isNull());
+    assertThat(bodyCaptor.getValue()).hasSize(2500); // sent in full despite the capped record
   }
 
   @Test

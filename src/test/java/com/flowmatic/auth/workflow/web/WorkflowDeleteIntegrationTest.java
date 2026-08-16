@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.flowmatic.auth.entity.Role;
 import com.flowmatic.auth.entity.User;
 import com.flowmatic.auth.repository.UserRepository;
+import com.flowmatic.auth.service.impl.ResendEmailService;
 import com.flowmatic.auth.workflow.entity.NodeRunLog;
 import com.flowmatic.auth.workflow.entity.NodeRunStatus;
 import com.flowmatic.auth.workflow.entity.NodeType;
@@ -26,7 +27,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.HttpStatus;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -44,7 +44,7 @@ class WorkflowDeleteIntegrationTest {
 
   private static final String OWNER_EMAIL = "deleter@example.com";
 
-  @MockitoBean JavaMailSender mailSender;
+  @MockitoBean ResendEmailService resendEmailService;
 
   @Autowired MockMvc mockMvc;
   @Autowired UserRepository userRepository;

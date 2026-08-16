@@ -1,5 +1,6 @@
 package com.flowmatic.auth.workflow.executor;
 
+import com.flowmatic.auth.service.impl.ResendEmailService;
 import com.flowmatic.auth.workflow.entity.NodeType;
 import com.flowmatic.auth.workflow.execution.NodeExecutionContext;
 import com.flowmatic.auth.workflow.execution.NodeExecutionResult;
@@ -12,17 +13,15 @@ import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.mail.MailException;
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClientException;
 
 /**
  * Generic OUTPUT (email) executor. {@code to}, {@code subject} and {@code body} are templates over
  * the namespaced context. With an optional {@code forEach} pointing at an upstream array, the node
  * sends once per element with {@code {{item.*}}} available; without it, it sends a single email.
  *
- * <p>Transport-agnostic (only {@link JavaMailSender} + a "from" address); one failed recipient
+ * <p>Transport-agnostic (only {@link ResendEmailService} + a "from" address); one failed recipient
  * never aborts the batch.
  *
  * <p>Alongside the {@code sent}/{@code failed}/{@code total} counters, the output records a {@code
@@ -31,7 +30,7 @@ import org.springframework.stereotype.Component;
  * see {@link #MAX_RECORDED_MESSAGES} and {@link #MAX_RECORDED_BODY}.
  *
  * <p>A node configured with {@code "sendMode": "manual"} resolves and records every message exactly
- * as above but never calls {@link JavaMailSender#send}, holding each entry {@code status:
+ * as above but never calls {@link ResendEmailService#send}, holding each entry {@code status:
  * "PENDING"} instead — the node still reports {@link NodeExecutionResult#success}, since resolving
  * the batch for review <em>is</em> its job in this mode. Pending entries are not truncated (they
  * still need to be sent later, so shortening a body here would mean silently sending a clipped
@@ -59,15 +58,15 @@ public class EmailOutputNodeExecutor implements NodeExecutor {
   private static final String SENT_STATUS = "SENT";
   private static final String FAILED_STATUS = "FAILED";
 
-  private final JavaMailSender mailSender;
+  private final ResendEmailService resendEmailService;
   private final String defaultFrom;
   private final TemplateResolver templateResolver;
 
   public EmailOutputNodeExecutor(
-      JavaMailSender mailSender,
-      @Value("${app.mail.from}") String defaultFrom,
+      ResendEmailService resendEmailService,
+      @Value("${resend.from.email}") String defaultFrom,
       TemplateResolver templateResolver) {
-    this.mailSender = mailSender;
+    this.resendEmailService = resendEmailService;
     this.defaultFrom = defaultFrom;
     this.templateResolver = templateResolver;
   }
@@ -99,10 +98,9 @@ public class EmailOutputNodeExecutor implements NodeExecutor {
     List<String> failed = new ArrayList<>();
     List<Map<String, Object>> messages = new ArrayList<>();
     for (Map<String, Object> scope : scopes) {
-      String to;
-      SimpleMailMessage message;
+      ResolvedMessage message;
       try {
-        to = templateResolver.resolveToString(context.configValue("to"), scope);
+        String to = templateResolver.resolveToString(context.configValue("to"), scope);
         String subject = templateResolver.resolveToString(context.configValue("subject"), scope);
         String body = templateResolver.resolveToString(context.configValue("body"), scope);
         String from =
@@ -110,11 +108,9 @@ public class EmailOutputNodeExecutor implements NodeExecutor {
                 ? defaultFrom
                 : templateResolver.resolveToString(context.configValue("from"), scope);
 
-        message = new SimpleMailMessage();
-        message.setFrom(from);
-        message.setTo(to);
-        message.setSubject(subject == null || subject.isBlank() ? DEFAULT_SUBJECT : subject);
-        message.setText(body);
+        message =
+            new ResolvedMessage(
+                from, to, subject == null || subject.isBlank() ? DEFAULT_SUBJECT : subject, body);
       } catch (RuntimeException e) {
         return NodeExecutionResult.failure("Email template error: " + e.getMessage());
       }
@@ -126,11 +122,12 @@ public class EmailOutputNodeExecutor implements NodeExecutor {
 
       String error = null;
       try {
-        mailSender.send(message);
+        resendEmailService.send(
+            message.from(), message.to(), message.subject(), message.body(), null);
         sent++;
-      } catch (MailException e) {
-        log.warn("Failed to send to {}: {}", to, e.getMessage());
-        failed.add(to);
+      } catch (RestClientException e) {
+        log.warn("Failed to send to {}: {}", message.to(), e.getMessage());
+        failed.add(message.to());
         error = e.getMessage();
       }
 
@@ -197,20 +194,21 @@ public class EmailOutputNodeExecutor implements NodeExecutor {
         continue;
       }
 
-      String to = (String) entry.get("to");
-      SimpleMailMessage message = new SimpleMailMessage();
-      message.setFrom((String) entry.get("from"));
-      message.setTo(to);
-      message.setSubject((String) entry.get("subject"));
-      message.setText((String) entry.get("body"));
+      ResolvedMessage message =
+          new ResolvedMessage(
+              (String) entry.get("from"),
+              (String) entry.get("to"),
+              (String) entry.get("subject"),
+              (String) entry.get("body"));
 
       String error = null;
       try {
-        mailSender.send(message);
+        resendEmailService.send(
+            message.from(), message.to(), message.subject(), message.body(), null);
         sent++;
-      } catch (MailException e) {
-        log.warn("Failed to send to {}: {}", to, e.getMessage());
-        failed.add(to);
+      } catch (RestClientException e) {
+        log.warn("Failed to send to {}: {}", message.to(), e.getMessage());
+        failed.add(message.to());
         error = e.getMessage();
       }
       settled.add(record(message, error));
@@ -234,19 +232,18 @@ public class EmailOutputNodeExecutor implements NodeExecutor {
 
   /**
    * One run-log entry describing a message that was actually built and attempted. Read back off the
-   * {@link SimpleMailMessage} rather than the resolved strings, so what is recorded is exactly what
-   * went to the transport — including the default subject substituted for a blank one.
+   * {@link ResolvedMessage} rather than the raw resolved strings, so what is recorded is exactly
+   * what went to the transport — including the default subject substituted for a blank one.
    *
-   * @param error the {@link MailException} message, or null if the send succeeded
+   * @param error the {@link RestClientException} message, or null if the send succeeded
    */
-  private static Map<String, Object> record(SimpleMailMessage message, String error) {
+  private static Map<String, Object> record(ResolvedMessage message, String error) {
     Map<String, Object> entry = new LinkedHashMap<>();
 
-    String[] recipients = message.getTo();
-    entry.put("to", recipients == null || recipients.length == 0 ? null : recipients[0]);
-    entry.put("subject", message.getSubject());
+    entry.put("to", message.to());
+    entry.put("subject", message.subject());
 
-    String body = message.getText() == null ? "" : message.getText();
+    String body = message.body() == null ? "" : message.body();
     if (body.length() > MAX_RECORDED_BODY) {
       entry.put("body", body.substring(0, MAX_RECORDED_BODY));
       entry.put("bodyTruncated", true);
@@ -266,14 +263,13 @@ public class EmailOutputNodeExecutor implements NodeExecutor {
    * truncated and {@code from} is included — both are needed intact for {@link #sendPending} to
    * send this exact message later.
    */
-  private static Map<String, Object> pendingRecord(SimpleMailMessage message) {
+  private static Map<String, Object> pendingRecord(ResolvedMessage message) {
     Map<String, Object> entry = new LinkedHashMap<>();
 
-    String[] recipients = message.getTo();
-    entry.put("to", recipients == null || recipients.length == 0 ? null : recipients[0]);
-    entry.put("subject", message.getSubject());
-    entry.put("body", message.getText() == null ? "" : message.getText());
-    entry.put("from", message.getFrom());
+    entry.put("to", message.to());
+    entry.put("subject", message.subject());
+    entry.put("body", message.body() == null ? "" : message.body());
+    entry.put("from", message.from());
     entry.put("status", PENDING);
     return entry;
   }
@@ -296,4 +292,10 @@ public class EmailOutputNodeExecutor implements NodeExecutor {
     }
     return scopes;
   }
+
+  /**
+   * A resolved email awaiting send or record — transport-agnostic replacement for
+   * SimpleMailMessage.
+   */
+  private record ResolvedMessage(String from, String to, String subject, String body) {}
 }

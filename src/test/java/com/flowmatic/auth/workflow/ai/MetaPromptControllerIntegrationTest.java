@@ -9,13 +9,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.flowmatic.auth.service.impl.ResendEmailService;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -33,7 +33,7 @@ class MetaPromptControllerIntegrationTest {
 
   private static final String CALLER = "prompter@example.com";
 
-  @MockitoBean JavaMailSender mailSender;
+  @MockitoBean ResendEmailService resendEmailService;
   @MockitoBean MetaPromptService metaPromptService;
 
   @Autowired MockMvc mockMvc;
