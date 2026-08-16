@@ -16,8 +16,8 @@ jobs:
     steps:
       - name: Ping health endpoint
         run: |
-          status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 30 --retry 1 --retry-delay 5 \
-            https://flowmatic-backend-3c9q.onrender.com/)
+          status=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 90 --retry 2 --retry-delay 15 \
+            https://flowmatic-backend-3c9q.onrender.com/ || echo 000)
           echo "Response status: $status"
           if [ "$status" != "200" ]; then
             echo "Health check failed with status $status"
