@@ -5,8 +5,8 @@ import java.io.InputStream;
 
 /**
  * Stores uploaded source files (currently CSVs) and hands back an opaque reference id that a
- * DATA_SOURCE node's config can point to. Kept behind an interface so the backing store (local disk
- * today, object storage later) can be swapped without touching executors.
+ * DATA_SOURCE node's config can point to. Kept behind an interface so the backing store can be
+ * swapped without touching executors.
  */
 public interface UploadStorage {
 

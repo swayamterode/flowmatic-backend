@@ -22,6 +22,7 @@ import com.flowmatic.auth.workflow.repository.NodeRunLogRepository;
 import com.flowmatic.auth.workflow.repository.WorkflowRepository;
 import com.flowmatic.auth.workflow.repository.WorkflowRunRepository;
 import com.flowmatic.auth.workflow.upload.UploadStorage;
+import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -67,13 +68,13 @@ class WorkflowExecutionIntegrationTest {
   }
 
   @MockitoBean ResendEmailService resendEmailService;
+  @MockitoBean UploadStorage uploadStorage;
 
   @Autowired UserRepository userRepository;
   @Autowired WorkflowRepository workflowRepository;
   @Autowired WorkflowRunRepository workflowRunRepository;
   @Autowired NodeRunLogRepository nodeRunLogRepository;
   @Autowired WorkflowExecutionService executionService;
-  @Autowired UploadStorage uploadStorage;
 
   private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -101,7 +102,11 @@ class WorkflowExecutionIntegrationTest {
   @Test
   void crmFlowExpressedWithGenericNodes() throws Exception {
     byte[] csv = getClass().getResourceAsStream("/fixtures/customers.csv").readAllBytes();
-    String uploadId = uploadStorage.store("customers.csv", csv);
+    String uploadId = "test-upload-id";
+    when(uploadStorage.store("customers.csv", csv)).thenReturn(uploadId);
+    when(uploadStorage.exists(uploadId)).thenReturn(true);
+    when(uploadStorage.open(uploadId)).thenAnswer(invocation -> new ByteArrayInputStream(csv));
+    uploadStorage.store("customers.csv", csv);
     User user = newUser("crm@example.com");
 
     Map<String, Object> graph =
