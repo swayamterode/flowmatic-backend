@@ -89,4 +89,23 @@ class McpTokenControllerIntegrationTest {
         .perform(get("/api/workflows").header("Authorization", "Bearer " + mcpToken))
         .andExpect(status().isUnauthorized());
   }
+
+  @Test
+  void mcpTokenIsRejectedOnAPathThatMerelyStartsWithMcp() throws Exception {
+    userRepository.save(
+        User.builder()
+            .email("mcp-boundary@example.com")
+            .fullName("Boundary User")
+            .passwordHash("x")
+            .role(Role.USER)
+            .emailVerified(true)
+            .build());
+    String mcpToken = jwtUtil.generateMcpToken("mcp-boundary@example.com");
+
+    // /mcp-admin doesn't exist in this app, but it starts with the literal characters "/mcp" —
+    // a raw prefix match would wrongly treat it as in-scope for this token type.
+    mockMvc
+        .perform(get("/mcp-admin").header("Authorization", "Bearer " + mcpToken))
+        .andExpect(status().isUnauthorized());
+  }
 }

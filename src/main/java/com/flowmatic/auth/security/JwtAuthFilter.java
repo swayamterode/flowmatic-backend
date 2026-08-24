@@ -65,6 +65,13 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     if ("access".equals(tokenType)) {
       return true;
     }
-    return "mcp".equals(tokenType) && request.getRequestURI().startsWith(MCP_PATH_PREFIX);
+    if (!"mcp".equals(tokenType)) {
+      return false;
+    }
+    String uri = request.getRequestURI();
+    // Segment-aware match: a bare startsWith("/mcp") would also match a future route like
+    // /mcp-admin or /mcpx, silently granting this long-lived token type access it was never
+    // meant to have.
+    return uri.equals(MCP_PATH_PREFIX) || uri.startsWith(MCP_PATH_PREFIX + "/");
   }
 }
