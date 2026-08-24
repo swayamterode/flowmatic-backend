@@ -13,14 +13,17 @@ public class JwtUtil {
   private final SecretKey signingKey;
   private final long accessTokenExpiryMs;
   private final long refreshTokenExpiryMs;
+  private final long mcpTokenExpiryMs;
 
   public JwtUtil(
       @Value("${app.jwt.secret}") String secret,
       @Value("${app.jwt.access-token-expiry-ms}") long accessTokenExpiryMs,
-      @Value("${app.jwt.refresh-token-expiry-ms}") long refreshTokenExpiryMs) {
+      @Value("${app.jwt.refresh-token-expiry-ms}") long refreshTokenExpiryMs,
+      @Value("${app.jwt.mcp-token-expiry-ms}") long mcpTokenExpiryMs) {
     this.signingKey = Keys.hmacShaKeyFor(secret.getBytes());
     this.accessTokenExpiryMs = accessTokenExpiryMs;
     this.refreshTokenExpiryMs = refreshTokenExpiryMs;
+    this.mcpTokenExpiryMs = mcpTokenExpiryMs;
   }
 
   public String generateAccessToken(String email) {
@@ -29,6 +32,10 @@ public class JwtUtil {
 
   public String generateRefreshToken(String email) {
     return buildToken(email, refreshTokenExpiryMs, "refresh");
+  }
+
+  public String generateMcpToken(String email) {
+    return buildToken(email, mcpTokenExpiryMs, "mcp");
   }
 
   public long getAccessTokenExpirySeconds() {
