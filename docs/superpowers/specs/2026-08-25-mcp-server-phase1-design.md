@@ -19,7 +19,7 @@ app on Render — no new service to stand up. Chosen over:
 
 - A stdio-only local server: only runs on the developer's own machine, not demoable to anyone else.
 - Hand-rolling the MCP protocol without Spring AI: unnecessary — the starter already handles
-  JSON-RPC framing, tool schema generation from `@Tool` annotations, and transport wiring.
+  JSON-RPC framing, tool schema generation from `@McpTool` annotations, and transport wiring.
 
 ## Auth: long-lived MCP personal access token
 
@@ -43,8 +43,8 @@ This token is an explicit stand-in for Phase 2's real OAuth authorization flow, 
 
 New package `com.flowmatic.auth.workflow.mcp`:
 
-- One `@Tool`-annotated class, `WorkflowMcpTools`, wrapping existing services — no new business
-  logic added.
+- One `@McpTool`-annotated class, `WorkflowMcpTools`, wrapping existing services — no new
+  business logic added.
 - Tools (Phase 1 MVP, thin wrappers over what already exists):
   - `list_workflows` → mirrors `WorkflowController` `GET /workflows`
   - `get_workflow(id)` → mirrors `GET /workflows/{id}`
@@ -64,20 +64,30 @@ New package `com.flowmatic.auth.workflow.mcp`:
    `tools/call`.
 4. The MCP endpoint validates the bearer token via the existing filter (extended for the `mcp`
    token type), resolves the user, and the tool method delegates to the existing service
-   (`WorkflowService` / `DashboardService` / etc.) exactly as the REST controllers already do.
+   (`WorkflowRepository` / `WorkflowExecutionService` / `DashboardService`) exactly as the REST
+   controllers already do.
 5. The result flows back as MCP tool-result content; the client turns it into a natural-language
    reply.
 
 ## Error handling
 
-Each tool method catches exceptions from the underlying service (not found, not owned by this
-user, validation errors) and returns an MCP error result (`isError: true`) with a clean message —
-never a raw exception or stack trace surfaced to the client.
+Tool methods do NOT catch exceptions themselves. The Spring AI MCP framework automatically catches
+any `RuntimeException` thrown out of an `@McpTool` method (confirmed by inspection of
+`AbstractSyncMcpToolMethodCallback.createSyncErrorResult`) and converts it into an MCP error result
+(`isError: true`) using the exception's message — never a raw stack trace surfaced to the client.
+So letting `ResponseStatusException`/`IllegalArgumentException` (not found, not owned by this user,
+validation errors) propagate unguarded, exactly as the equivalent REST controllers already do, is
+both correct and required — adding manual try/catch would be redundant with what the framework
+already does. (Follow-up from the final whole-branch review: this conversion path doesn't log
+server-side, unlike the REST surface's `GlobalExceptionHandler` — see the fix commit that adds
+logging around each tool method.)
 
 ## Testing
 
-- Unit tests for the tool wrapper methods, mocking the underlying services the same way existing
-  controller tests do.
+- Integration tests for the tool wrapper methods (`@SpringBootTest` + `@ActiveProfiles("test")` +
+  `@WithMockUser`, calling the `@Component` bean's methods directly against the real services and
+  H2 database), matching this repo's existing test convention rather than a mock-heavy unit-test
+  style.
 - Manual verification with the MCP Inspector (Anthropic's MCP dev tool) against the local app
   before deploying.
 - Manual verification against the deployed Render URL, connected from Claude Desktop, confirming a
