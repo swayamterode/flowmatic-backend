@@ -12,6 +12,9 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.ai.mcp.annotation.McpTool;
 import org.springframework.ai.mcp.annotation.McpToolParam;
 import org.springframework.http.HttpStatus;
@@ -27,6 +30,8 @@ import org.springframework.web.server.ResponseStatusException;
  */
 @Component
 public class WorkflowMcpTools {
+
+  private static final Logger log = LoggerFactory.getLogger(WorkflowMcpTools.class);
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
@@ -50,8 +55,12 @@ public class WorkflowMcpTools {
       name = "list_workflows",
       description = "List the workflows owned by the current Flowmatic user.")
   public List<Map<String, Object>> listWorkflows() {
-    Long userId = currentUser.requireUserId(currentAuthentication());
-    return workflowRepository.findByUser_Id(userId).stream().map(this::summary).toList();
+    return logged(
+        "list_workflows",
+        () -> {
+          Long userId = currentUser.requireUserId(currentAuthentication());
+          return workflowRepository.findByUser_Id(userId).stream().map(this::summary).toList();
+        });
   }
 
   @McpTool(
@@ -59,7 +68,7 @@ public class WorkflowMcpTools {
       description = "Get a single workflow's details, including its node graph, by id.")
   public Map<String, Object> getWorkflow(
       @McpToolParam(description = "The workflow id", required = true) Long workflowId) {
-    return detail(requireOwned(workflowId));
+    return logged("get_workflow", () -> detail(requireOwned(workflowId)));
   }
 
   @McpTool(
@@ -69,9 +78,13 @@ public class WorkflowMcpTools {
               + "get_dashboard_summary afterwards to see the result.")
   public Map<String, Object> runWorkflow(
       @McpToolParam(description = "The workflow id to run", required = true) Long workflowId) {
-    requireOwned(workflowId);
-    WorkflowRun run = executionService.enqueue(workflowId);
-    return runSummary(run);
+    return logged(
+        "run_workflow",
+        () -> {
+          requireOwned(workflowId);
+          WorkflowRun run = executionService.enqueue(workflowId);
+          return runSummary(run);
+        });
   }
 
   @McpTool(
@@ -80,8 +93,27 @@ public class WorkflowMcpTools {
           "Get aggregate execution stats for the current user: executions today, success "
               + "rate, failed runs, median run time.")
   public SummaryStatsDTO getDashboardSummary() {
-    Long userId = currentUser.requireUserId(currentAuthentication());
-    return dashboardService.summary(userId, Instant.now());
+    return logged(
+        "get_dashboard_summary",
+        () -> {
+          Long userId = currentUser.requireUserId(currentAuthentication());
+          return dashboardService.summary(userId, Instant.now());
+        });
+  }
+
+  /**
+   * Logs any exception on its way out, then rethrows so the MCP framework still converts it into an
+   * {@code isError} result (see {@code AbstractSyncMcpToolMethodCallback.createSyncErrorResult}).
+   * Without this, tool failures leave no server-side trace at all — unlike the REST surface, which
+   * gets that from {@code GlobalExceptionHandler}. Log-and-rethrow, never swallow.
+   */
+  private static <T> T logged(String toolName, Supplier<T> action) {
+    try {
+      return action.get();
+    } catch (RuntimeException e) {
+      log.error("MCP tool '{}' failed: {}", toolName, e.getMessage(), e);
+      throw e;
+    }
   }
 
   private static Authentication currentAuthentication() {
