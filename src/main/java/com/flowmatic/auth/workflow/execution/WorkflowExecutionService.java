@@ -1,9 +1,11 @@
 package com.flowmatic.auth.workflow.execution;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.flowmatic.auth.workflow.entity.ErrorCause;
 import com.flowmatic.auth.workflow.entity.NodeRunLog;
 import com.flowmatic.auth.workflow.entity.NodeRunStatus;
 import com.flowmatic.auth.workflow.entity.NodeType;
+import com.flowmatic.auth.workflow.entity.TriggerType;
 import com.flowmatic.auth.workflow.entity.Workflow;
 import com.flowmatic.auth.workflow.entity.WorkflowRun;
 import com.flowmatic.auth.workflow.entity.WorkflowRunStatus;
@@ -17,6 +19,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import org.slf4j.Logger;
@@ -146,7 +149,11 @@ public class WorkflowExecutionService {
             .orElseThrow(() -> new IllegalArgumentException("Workflow not found: " + workflowId));
     quotaService.enforceQuota(workflow.getUser().getId());
     return workflowRunRepository.save(
-        WorkflowRun.builder().workflow(workflow).status(WorkflowRunStatus.PENDING).build());
+        WorkflowRun.builder()
+            .workflow(workflow)
+            .status(WorkflowRunStatus.PENDING)
+            .triggerType(TriggerType.MANUAL)
+            .build());
   }
 
   /**
@@ -170,6 +177,7 @@ public class WorkflowExecutionService {
     runEntity = workflowRunRepository.save(runEntity);
 
     boolean failed = false;
+    ErrorCause errorCause = null;
     try {
       Workflow workflow =
           workflowRepository
@@ -235,8 +243,10 @@ public class WorkflowExecutionService {
         } else {
           statusByNode.put(node.id(), NodeRunStatus.FAILED);
           nodeLog.setStatus(NodeRunStatus.FAILED);
-          nodeLog.setErrorMessage(composeError(result));
+          String errorMessage = composeError(result);
+          nodeLog.setErrorMessage(errorMessage);
           nodeRunLogRepository.save(nodeLog);
+          errorCause = classifyError(errorMessage);
           failed = true;
           break;
         }
@@ -244,10 +254,17 @@ public class WorkflowExecutionService {
     } catch (RuntimeException e) {
       log.error("Run {} failed to execute", runEntity.getId(), e);
       failed = true;
+      errorCause =
+          e instanceof IllegalArgumentException
+              ? ErrorCause.VALIDATION
+              : classifyError(e.getMessage());
     }
 
     runEntity.setStatus(failed ? WorkflowRunStatus.FAILED : WorkflowRunStatus.SUCCESS);
     runEntity.setCompletedAt(Instant.now());
+    if (failed) {
+      runEntity.setErrorCause(errorCause != null ? errorCause : ErrorCause.OTHER);
+    }
     return workflowRunRepository.save(runEntity);
   }
 
@@ -341,5 +358,22 @@ public class WorkflowExecutionService {
     }
     String msg = sb.toString();
     return msg.length() > ERROR_MESSAGE_MAX ? msg.substring(0, ERROR_MESSAGE_MAX) : msg;
+  }
+
+  /**
+   * Classifies a run failure from its final composed error message. Every {@code NodeExecutor}
+   * already catches its own exceptions and returns a message string (see the failing-branch call
+   * site above), so the message is the only signal left by the time a failure reaches here — this
+   * is a heuristic over human-readable text, not an exception-type check.
+   */
+  static ErrorCause classifyError(String message) {
+    String lower = String.valueOf(message).toLowerCase(Locale.ROOT);
+    if (lower.contains("not connected") || lower.contains("reconnect")) {
+      return ErrorCause.AUTH;
+    }
+    if (lower.contains("timeout") || lower.contains("timed out")) {
+      return ErrorCause.TIMEOUT;
+    }
+    return ErrorCause.OTHER;
   }
 }

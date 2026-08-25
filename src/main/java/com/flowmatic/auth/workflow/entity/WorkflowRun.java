@@ -33,4 +33,15 @@ public class WorkflowRun {
 
   @Column(name = "completed_at")
   private Instant completedAt;
+
+  // Nullable at the DB level even though every new run sets one of these: adding a NOT NULL column
+  // via Hibernate ddl-auto=update fails against an already-populated table. Legacy rows read back
+  // null and are treated as "predates this field", not an error.
+  @Enumerated(EnumType.STRING)
+  @Column(name = "trigger_type", columnDefinition = "varchar(32)")
+  private TriggerType triggerType;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "error_cause", columnDefinition = "varchar(32)")
+  private ErrorCause errorCause;
 }
