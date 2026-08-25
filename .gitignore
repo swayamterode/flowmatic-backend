@@ -40,3 +40,4 @@ build/
 
 ### Superpowers agent workspace ###
 .superpowers/
+/docs/
