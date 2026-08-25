@@ -55,9 +55,21 @@ public class GlobalExceptionHandler {
     return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req);
   }
 
+  @ExceptionHandler(InvalidResetTokenException.class)
+  public ResponseEntity<ErrorResponse> handleInvalidResetToken(
+      InvalidResetTokenException ex, HttpServletRequest req) {
+    return build(HttpStatus.BAD_REQUEST, ex.getMessage(), req);
+  }
+
   @ExceptionHandler(OtpResendCooldownException.class)
   public ResponseEntity<ErrorResponse> handleOtpCooldown(
       OtpResendCooldownException ex, HttpServletRequest req) {
+    return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), req);
+  }
+
+  @ExceptionHandler(PasswordResetCooldownException.class)
+  public ResponseEntity<ErrorResponse> handlePasswordResetCooldown(
+      PasswordResetCooldownException ex, HttpServletRequest req) {
     return build(HttpStatus.TOO_MANY_REQUESTS, ex.getMessage(), req);
   }
 

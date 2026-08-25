@@ -35,6 +35,8 @@ public class SecurityConfig {
     "/api/auth/refresh-token",
     "/api/auth/verify-email",
     "/api/auth/resend-otp",
+    "/api/auth/forgot-password",
+    "/api/auth/reset-password",
     // Google's OAuth redirect carries no JWT; the user is authenticated via the signed state param.
     "/api/integrations/google/callback",
     // Stripe is the caller here, authenticated by its request signature, not a JWT.

@@ -1,13 +1,16 @@
 package com.flowmatic.auth.controller;
 
 import com.flowmatic.auth.dto.AuthResponse;
+import com.flowmatic.auth.dto.ForgotPasswordRequest;
 import com.flowmatic.auth.dto.LoginRequest;
 import com.flowmatic.auth.dto.MessageResponse;
 import com.flowmatic.auth.dto.RefreshTokenRequest;
 import com.flowmatic.auth.dto.RegisterRequest;
 import com.flowmatic.auth.dto.ResendOtpRequest;
+import com.flowmatic.auth.dto.ResetPasswordRequest;
 import com.flowmatic.auth.dto.VerifyEmailRequest;
 import com.flowmatic.auth.service.AuthService;
+import com.flowmatic.auth.service.PasswordResetService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -20,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
   private final AuthService authService;
+  private final PasswordResetService passwordResetService;
 
   @PostMapping("/register")
   public ResponseEntity<MessageResponse> register(@Valid @RequestBody RegisterRequest request) {
@@ -46,5 +50,17 @@ public class AuthController {
   public ResponseEntity<AuthResponse> refreshToken(
       @Valid @RequestBody RefreshTokenRequest request) {
     return ResponseEntity.ok(authService.refreshToken(request.getRefreshToken()));
+  }
+
+  @PostMapping("/forgot-password")
+  public ResponseEntity<MessageResponse> forgotPassword(
+      @Valid @RequestBody ForgotPasswordRequest request) {
+    return ResponseEntity.ok(passwordResetService.requestReset(request));
+  }
+
+  @PostMapping("/reset-password")
+  public ResponseEntity<MessageResponse> resetPassword(
+      @Valid @RequestBody ResetPasswordRequest request) {
+    return ResponseEntity.ok(passwordResetService.resetPassword(request));
   }
 }
