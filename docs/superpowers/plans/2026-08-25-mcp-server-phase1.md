@@ -15,10 +15,12 @@
 - Dependency version: `org.springframework.ai:spring-ai-starter-mcp-server-webmvc` — no explicit `<version>` tag; it's resolved from the `spring-ai-bom` (`2.0.0`) already imported in `pom.xml`.
 - MCP tool annotation: `org.springframework.ai.mcp.annotation.McpTool` / `org.springframework.ai.mcp.annotation.McpToolParam` (NOT `org.springframework.ai.tool.annotation.Tool` — that's a different, unrelated annotation for LLM function-calling). `generateOutputSchema` defaults to `false` — do not set it explicitly.
 - Default MCP endpoint path is `POST /mcp` (property `spring.ai.mcp.server.streamable-http.mcp-endpoint`, default already `/mcp` — do not override).
+- **Ruling (corrects the original plan text):** `spring.ai.mcp.server.protocol` must be set EXPLICITLY to `streamable` in `application.properties`. The configuration-metadata's documented default (`streamable`) is not actually applied by the `@ConditionalOnProperty` checks in `spring-ai-autoconfigure-mcp-server-common:2.0.0` — confirmed via `--debug` autoconfiguration report: with the property unset, `StreamableEnabledCondition` reports "did not find property 'protocol'" (fails) while `SseEnabledCondition` (also gated on the same absent property) reports "matched", so `McpServerSseWebMvcAutoConfiguration` activates instead of `McpServerStreamableHttpWebMvcAutoConfiguration` — mapping `/sse` and `/mcp/message`, never a plain `POST /mcp` handler, which is why it 404'd as "No static resource mcp." Verified fix: explicitly setting `spring.ai.mcp.server.protocol=streamable` makes `McpServerEndpointIntegrationTest` pass.
 - New JWT token type string is `"mcp"` (existing types are `"access"` / `"refresh"` — see `JwtUtil.buildToken`).
 - Never assert on Jackson deserializing this repo's Lombok DTOs (`AuthResponse`, `MessageResponse`, `McpTokenResponse`, etc.) into a typed object — they have only an all-args constructor (Lombok's `@Data` does not add an implicit no-arg constructor once `@AllArgsConstructor` is also present), so `objectMapper.readValue(json, SomeDto.class)` is not guaranteed to work. Parse response bodies as `Map.class` in tests instead (existing convention, e.g. `WorkflowController.fromJson`).
 - Every `RuntimeException` thrown out of an `@McpTool` method (including `ResponseStatusException`, `IllegalArgumentException`) is automatically caught by the framework and converted into an MCP error result using `getMessage()` — do not add manual try/catch in tool methods; this is why `requireOwned`'s existing `ResponseStatusException(HttpStatus.NOT_FOUND, "Workflow not found")` message style is safe to let propagate as-is.
 - Test convention in this repo: `@SpringBootTest` + `@AutoConfigureMockMvc` (only when hitting HTTP) + `@ActiveProfiles("test")` + `@MockitoBean ResendEmailService resendEmailService` (required in every `@SpringBootTest` class, or the context fails to start) + `@WithMockUser(username = "...@example.com")` for a pre-authenticated caller. No plain-Mockito-unit-test style exists in this codebase for controller/service-adjacent code — follow the integration-test-over-H2 convention.
+- **Ruling (corrects the original Task 3 code):** the `/mcp` path check in `JwtAuthFilter.isAcceptableTokenType` must be segment-aware (`uri.equals("/mcp") || uri.startsWith("/mcp/")`), not a bare `startsWith("/mcp")`. A raw prefix match would also accept an `mcp`-typed token on any future route that merely begins with the letters "mcp" (e.g. `/mcp-admin`) — inert today since no such route exists, but a latent scope-escape for a 1-year-lived token the moment one is added. Found in task-reviewer review of Task 3.
 
 ---
 
@@ -119,6 +121,10 @@ In `src/main/resources/application.properties`, append:
 spring.ai.mcp.server.name=flowmatic-mcp-server
 spring.ai.mcp.server.version=0.1.0
 spring.ai.mcp.server.instructions=Manage Flowmatic workflows: list them, inspect one, trigger a run, and check dashboard summary stats.
+# Must be set explicitly — see Global Constraints ruling: the documented default isn't actually
+# applied by this release's auto-configuration conditions, so leaving it unset activates the SSE
+# transport (mapping /sse + /mcp/message) instead of a plain POST /mcp handler.
+spring.ai.mcp.server.protocol=streamable
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -435,7 +441,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     if ("access".equals(tokenType)) {
       return true;
     }
-    return "mcp".equals(tokenType) && request.getRequestURI().startsWith(MCP_PATH_PREFIX);
+    if (!"mcp".equals(tokenType)) {
+      return false;
+    }
+    String uri = request.getRequestURI();
+    // Segment-aware match: a bare startsWith("/mcp") would also match a future route like
+    // /mcp-admin or /mcpx, silently granting this long-lived token type access it was never
+    // meant to have.
+    return uri.equals(MCP_PATH_PREFIX) || uri.startsWith(MCP_PATH_PREFIX + "/");
   }
 }
 ```
