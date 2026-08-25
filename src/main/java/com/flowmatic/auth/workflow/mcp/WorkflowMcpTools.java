@@ -93,8 +93,7 @@ public class WorkflowMcpTools {
     return workflowRepository
         .findById(id)
         .filter(w -> w.getUser().getId().equals(userId))
-        .orElseThrow(
-            () -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Workflow not found"));
+        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Workflow not found"));
   }
 
   private Map<String, Object> summary(Workflow w) {

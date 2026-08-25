@@ -43,11 +43,7 @@ class WorkflowMcpToolsIntegrationTest {
 
   private Workflow saveWorkflow(User user, String name) {
     return workflowRepository.save(
-        Workflow.builder()
-            .user(user)
-            .name(name)
-            .graphJson("{\"nodes\":[],\"edges\":[]}")
-            .build());
+        Workflow.builder().user(user).name(name).graphJson("{\"nodes\":[],\"edges\":[]}").build());
   }
 
   @Test

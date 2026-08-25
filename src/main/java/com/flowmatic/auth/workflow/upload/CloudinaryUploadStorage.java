@@ -37,10 +37,14 @@ public class CloudinaryUploadStorage implements UploadStorage {
         .upload(
             content,
             ObjectUtils.asMap(
-                "resource_type", RESOURCE_TYPE,
-                "type", DELIVERY_TYPE,
-                "public_id", publicIdFor(uploadId),
-                "overwrite", false));
+                "resource_type",
+                RESOURCE_TYPE,
+                "type",
+                DELIVERY_TYPE,
+                "public_id",
+                publicIdFor(uploadId),
+                "overwrite",
+                false));
     return uploadId;
   }
 
