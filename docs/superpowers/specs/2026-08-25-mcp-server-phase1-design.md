@@ -78,9 +78,12 @@ any `RuntimeException` thrown out of an `@McpTool` method (confirmed by inspecti
 So letting `ResponseStatusException`/`IllegalArgumentException` (not found, not owned by this user,
 validation errors) propagate unguarded, exactly as the equivalent REST controllers already do, is
 both correct and required — adding manual try/catch would be redundant with what the framework
-already does. (Follow-up from the final whole-branch review: this conversion path doesn't log
-server-side, unlike the REST surface's `GlobalExceptionHandler` — see the fix commit that adds
-logging around each tool method.)
+already does.
+
+The framework's conversion does not log anything server-side, though, unlike the REST surface's
+`GlobalExceptionHandler`. So each tool body is wrapped in a log-and-rethrow helper: the exception is
+recorded with its stack trace, then rethrown unchanged so the framework still does the `isError`
+conversion. Log, never swallow.
 
 ## Testing
 
@@ -88,6 +91,10 @@ logging around each tool method.)
   `@WithMockUser`, calling the `@Component` bean's methods directly against the real services and
   H2 database), matching this repo's existing test convention rather than a mock-heavy unit-test
   style.
+- One integration test that drives the server over real HTTP — a full `initialize` handshake, then
+  `tools/list` and `tools/call` — authenticated only by an `mcp`-typed JWT and deliberately without
+  `@WithMockUser`. This is the only coverage of tool registration and of caller resolution on the
+  thread the framework actually invokes tools on.
 - Manual verification with the MCP Inspector (Anthropic's MCP dev tool) against the local app
   before deploying.
 - Manual verification against the deployed Render URL, connected from Claude Desktop, confirming a
