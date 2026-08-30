@@ -14,15 +14,11 @@ import com.flowmatic.auth.workflow.repository.WorkflowRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 @SpringBootTest
 @ActiveProfiles("test")
 class WorkflowTriggerAndErrorCauseIntegrationTest {
-
-  @MockitoBean JavaMailSender mailSender;
 
   @Autowired UserRepository userRepository;
   @Autowired WorkflowRepository workflowRepository;
