@@ -1,10 +1,11 @@
 package com.flowmatic.auth.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -12,20 +13,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.flowmatic.auth.entity.Role;
 import com.flowmatic.auth.entity.User;
 import com.flowmatic.auth.repository.UserRepository;
-import jakarta.mail.Session;
-import jakarta.mail.internet.MimeMessage;
-import jakarta.mail.internet.MimeMultipart;
-import java.util.Properties;
+import com.flowmatic.auth.service.impl.ResendEmailService;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -39,19 +35,14 @@ class AuthControllerPasswordResetIntegrationTest {
   private static final String GENERIC_MESSAGE =
       "If an account exists for this email, a reset link has been sent.";
 
-  @MockitoBean JavaMailSender mailSender;
+  // sendPasswordResetEmail() is @Async, so the real send happens on a background thread after
+  // the HTTP response returns — verify() below uses Mockito's timeout() to poll for it instead
+  // of asserting immediately.
+  @MockitoBean ResendEmailService resendEmailService;
 
   @Autowired MockMvc mockMvc;
   @Autowired UserRepository userRepository;
   @Autowired PasswordEncoder passwordEncoder;
-
-  @BeforeEach
-  void stubMimeMessageCreation() {
-    // A fresh MimeMessage per call — tests that call forgot-password more than once must not
-    // silently share (and overwrite) the same captured message.
-    when(mailSender.createMimeMessage())
-        .thenAnswer(invocation -> new MimeMessage(Session.getInstance(new Properties())));
-  }
 
   private void seedVerifiedUser(String email, String password) {
     userRepository
@@ -68,15 +59,8 @@ class AuthControllerPasswordResetIntegrationTest {
                         .build()));
   }
 
-  private String extractToken(MimeMessage message) throws Exception {
-    // MimeMessageHelper's boolean-true constructor is MULTIPART_MODE_MIXED_RELATED, which nests
-    // mixed -> related -> alternative even with no attachments/inline images (see EmailServiceImplTest
-    // for the same traversal, verified against Spring's actual MimeMessageHelper source).
-    MimeMultipart mixed = (MimeMultipart) message.getContent();
-    MimeMultipart related = (MimeMultipart) mixed.getBodyPart(0).getContent();
-    MimeMultipart alternative = (MimeMultipart) related.getBodyPart(0).getContent();
-    String plainText = (String) alternative.getBodyPart(0).getContent();
-    Matcher matcher = Pattern.compile("token=(\\S+)").matcher(plainText);
+  private String extractToken(String plainTextBody) {
+    Matcher matcher = Pattern.compile("token=(\\S+)").matcher(plainTextBody);
     assertThat(matcher.find()).isTrue();
     return matcher.group(1);
   }
@@ -93,7 +77,8 @@ class AuthControllerPasswordResetIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value(GENERIC_MESSAGE));
 
-    verify(mailSender).send(any(MimeMessage.class));
+    verify(resendEmailService, timeout(2000))
+        .send(eq("forgot-happy@example.com"), anyString(), anyString(), anyString());
   }
 
   @Test
@@ -107,7 +92,8 @@ class AuthControllerPasswordResetIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value(GENERIC_MESSAGE));
 
-    verify(mailSender, never()).send(any(MimeMessage.class));
+    verify(resendEmailService, never())
+        .send(anyString(), anyString(), anyString(), anyString());
   }
 
   @Test
@@ -146,9 +132,10 @@ class AuthControllerPasswordResetIntegrationTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content("{\"email\":\"reset-roundtrip@example.com\"}"));
 
-    ArgumentCaptor<MimeMessage> captor = ArgumentCaptor.forClass(MimeMessage.class);
-    verify(mailSender).send(captor.capture());
-    String token = extractToken(captor.getValue());
+    ArgumentCaptor<String> textCaptor = ArgumentCaptor.forClass(String.class);
+    verify(resendEmailService, timeout(2000))
+        .send(eq("reset-roundtrip@example.com"), anyString(), textCaptor.capture(), anyString());
+    String token = extractToken(textCaptor.getValue());
 
     mockMvc
         .perform(
