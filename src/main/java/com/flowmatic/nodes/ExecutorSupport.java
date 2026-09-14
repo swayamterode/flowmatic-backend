@@ -1,6 +1,5 @@
 package com.flowmatic.nodes;
 
-import com.flowmatic.nodes.NodeExecutionContext;
 import com.flowmatic.workflow.expression.TemplateResolver;
 import java.util.List;
 import java.util.Map;

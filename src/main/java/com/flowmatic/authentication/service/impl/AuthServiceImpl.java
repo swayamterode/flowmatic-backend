@@ -2,7 +2,6 @@ package com.flowmatic.authentication.service.impl;
 
 import com.flowmatic.authentication.dto.AuthResponse;
 import com.flowmatic.authentication.dto.LoginRequest;
-import com.flowmatic.common.dto.MessageResponse;
 import com.flowmatic.authentication.dto.RegisterRequest;
 import com.flowmatic.authentication.dto.ResendOtpRequest;
 import com.flowmatic.authentication.dto.VerifyEmailRequest;
@@ -18,6 +17,7 @@ import com.flowmatic.authentication.service.OtpService;
 import com.flowmatic.authentication.service.strategy.AuthProviderType;
 import com.flowmatic.authentication.service.strategy.AuthStrategyFactory;
 import com.flowmatic.authentication.service.strategy.AuthenticatedUser;
+import com.flowmatic.common.dto.MessageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;

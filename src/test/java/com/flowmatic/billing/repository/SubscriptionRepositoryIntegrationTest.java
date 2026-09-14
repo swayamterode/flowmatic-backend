@@ -2,12 +2,12 @@ package com.flowmatic.billing.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flowmatic.billing.entity.Subscription;
-import com.flowmatic.billing.entity.SubscriptionPlan;
-import com.flowmatic.billing.entity.SubscriptionStatus;
 import com.flowmatic.authentication.entity.Role;
 import com.flowmatic.authentication.entity.User;
 import com.flowmatic.authentication.repository.UserRepository;
+import com.flowmatic.billing.entity.Subscription;
+import com.flowmatic.billing.entity.SubscriptionPlan;
+import com.flowmatic.billing.entity.SubscriptionStatus;
 import com.flowmatic.common.email.impl.ResendEmailService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;

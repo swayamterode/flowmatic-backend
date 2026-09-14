@@ -12,8 +12,6 @@ import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.flowmatic.common.email.impl.ResendEmailService;
 import com.flowmatic.workflow.entity.NodeType;
-import com.flowmatic.nodes.NodeExecutionContext;
-import com.flowmatic.nodes.NodeExecutionResult;
 import com.flowmatic.workflow.expression.TemplateResolver;
 import java.util.List;
 import java.util.Map;

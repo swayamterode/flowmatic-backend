@@ -1,6 +1,7 @@
 package com.flowmatic.workflow.execution;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.flowmatic.nodes.EmailOutputNodeExecutor;
 import com.flowmatic.nodes.NodeExecutionContext;
 import com.flowmatic.nodes.NodeExecutionResult;
 import com.flowmatic.nodes.NodeExecutor;
@@ -15,7 +16,6 @@ import com.flowmatic.workflow.entity.WorkflowRun;
 import com.flowmatic.workflow.entity.WorkflowRunStatus;
 import com.flowmatic.workflow.execution.WorkflowGraph.GraphEdge;
 import com.flowmatic.workflow.execution.WorkflowGraph.GraphNode;
-import com.flowmatic.nodes.EmailOutputNodeExecutor;
 import com.flowmatic.workflow.repository.NodeRunLogRepository;
 import com.flowmatic.workflow.repository.WorkflowRepository;
 import com.flowmatic.workflow.repository.WorkflowRunRepository;

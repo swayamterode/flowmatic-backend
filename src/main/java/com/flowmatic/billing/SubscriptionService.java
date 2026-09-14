@@ -1,10 +1,10 @@
 package com.flowmatic.billing;
 
+import com.flowmatic.authentication.repository.UserRepository;
 import com.flowmatic.billing.entity.Subscription;
 import com.flowmatic.billing.entity.SubscriptionPlan;
 import com.flowmatic.billing.entity.SubscriptionStatus;
 import com.flowmatic.billing.repository.SubscriptionRepository;
-import com.flowmatic.authentication.repository.UserRepository;
 import java.time.Instant;
 import java.util.Optional;
 import org.slf4j.Logger;

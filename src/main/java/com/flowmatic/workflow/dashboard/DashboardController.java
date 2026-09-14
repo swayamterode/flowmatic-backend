@@ -1,9 +1,9 @@
 package com.flowmatic.workflow.dashboard;
 
+import com.flowmatic.common.web.CurrentUser;
 import com.flowmatic.workflow.dashboard.dto.ExecutionRowDTO;
 import com.flowmatic.workflow.dashboard.dto.StatusBreakdownDTO;
 import com.flowmatic.workflow.dashboard.dto.SummaryStatsDTO;
-import com.flowmatic.common.web.CurrentUser;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;

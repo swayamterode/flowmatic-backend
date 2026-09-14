@@ -1,6 +1,5 @@
 package com.flowmatic.common.exception;
 
-import com.flowmatic.common.dto.ErrorResponse;
 import com.flowmatic.authentication.exception.EmailNotVerifiedException;
 import com.flowmatic.authentication.exception.InvalidCredentialsException;
 import com.flowmatic.authentication.exception.InvalidOtpException;
@@ -9,6 +8,7 @@ import com.flowmatic.authentication.exception.InvalidTokenException;
 import com.flowmatic.authentication.exception.OtpResendCooldownException;
 import com.flowmatic.authentication.exception.PasswordResetCooldownException;
 import com.flowmatic.authentication.exception.UserAlreadyExistsException;
+import com.flowmatic.common.dto.ErrorResponse;
 import com.stripe.exception.StripeException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.time.Instant;

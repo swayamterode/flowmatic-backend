@@ -7,12 +7,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.flowmatic.authentication.entity.User;
+import com.flowmatic.authentication.repository.UserRepository;
 import com.flowmatic.billing.entity.Subscription;
 import com.flowmatic.billing.entity.SubscriptionPlan;
 import com.flowmatic.billing.entity.SubscriptionStatus;
 import com.flowmatic.billing.repository.SubscriptionRepository;
-import com.flowmatic.authentication.entity.User;
-import com.flowmatic.authentication.repository.UserRepository;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;

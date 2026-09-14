@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.flowmatic.authentication.entity.Role;
 import com.flowmatic.authentication.entity.User;
 import com.flowmatic.authentication.repository.UserRepository;
-import com.flowmatic.nodes.NodeExecutionResult;
 import com.flowmatic.workflow.entity.ErrorCause;
 import com.flowmatic.workflow.entity.TriggerType;
 import com.flowmatic.workflow.entity.Workflow;

@@ -6,8 +6,6 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 import com.flowmatic.workflow.entity.NodeType;
-import com.flowmatic.nodes.NodeExecutionContext;
-import com.flowmatic.nodes.NodeExecutionResult;
 import com.flowmatic.workflow.expression.TemplateResolver;
 import java.util.Map;
 import org.junit.jupiter.api.Test;

@@ -1,7 +1,6 @@
 package com.flowmatic.authentication.service.impl;
 
 import com.flowmatic.authentication.dto.ForgotPasswordRequest;
-import com.flowmatic.common.dto.MessageResponse;
 import com.flowmatic.authentication.dto.ResetPasswordRequest;
 import com.flowmatic.authentication.entity.PasswordResetToken;
 import com.flowmatic.authentication.entity.User;
@@ -9,8 +8,9 @@ import com.flowmatic.authentication.exception.InvalidResetTokenException;
 import com.flowmatic.authentication.exception.PasswordResetCooldownException;
 import com.flowmatic.authentication.repository.PasswordResetTokenRepository;
 import com.flowmatic.authentication.repository.UserRepository;
-import com.flowmatic.common.email.EmailService;
 import com.flowmatic.authentication.service.PasswordResetService;
+import com.flowmatic.common.dto.MessageResponse;
+import com.flowmatic.common.email.EmailService;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

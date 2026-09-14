@@ -92,8 +92,7 @@ class AuthControllerPasswordResetIntegrationTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.message").value(GENERIC_MESSAGE));
 
-    verify(resendEmailService, never())
-        .send(anyString(), anyString(), anyString(), anyString());
+    verify(resendEmailService, never()).send(anyString(), anyString(), anyString(), anyString());
   }
 
   @Test
@@ -143,8 +142,7 @@ class AuthControllerPasswordResetIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"token\":\"" + token + "\",\"newPassword\":\"brandNewPassword456\"}"))
         .andExpect(status().isOk())
-        .andExpect(
-            jsonPath("$.message").value("Password reset successfully. You can now log in."));
+        .andExpect(jsonPath("$.message").value("Password reset successfully. You can now log in."));
 
     mockMvc
         .perform(
