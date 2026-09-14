@@ -2,9 +2,9 @@ package com.flowmatic.auth.workflow.execution;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flowmatic.auth.entity.Role;
-import com.flowmatic.auth.entity.User;
-import com.flowmatic.auth.repository.UserRepository;
+import com.flowmatic.authentication.entity.Role;
+import com.flowmatic.authentication.entity.User;
+import com.flowmatic.authentication.repository.UserRepository;
 import com.flowmatic.auth.workflow.entity.ErrorCause;
 import com.flowmatic.auth.workflow.entity.TriggerType;
 import com.flowmatic.auth.workflow.entity.Workflow;

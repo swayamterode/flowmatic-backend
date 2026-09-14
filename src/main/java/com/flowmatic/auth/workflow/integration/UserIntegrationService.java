@@ -1,7 +1,7 @@
 package com.flowmatic.auth.workflow.integration;
 
-import com.flowmatic.auth.entity.User;
-import com.flowmatic.auth.repository.UserRepository;
+import com.flowmatic.authentication.entity.User;
+import com.flowmatic.authentication.repository.UserRepository;
 import com.flowmatic.auth.workflow.entity.UserIntegration;
 import com.flowmatic.auth.workflow.repository.UserIntegrationRepository;
 import java.time.Instant;

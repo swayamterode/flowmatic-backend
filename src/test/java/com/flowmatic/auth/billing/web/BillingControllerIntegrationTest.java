@@ -14,9 +14,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.flowmatic.auth.billing.StripeCheckoutService;
 import com.flowmatic.auth.billing.StripeWebhookService;
 import com.flowmatic.auth.billing.entity.SubscriptionPlan;
-import com.flowmatic.auth.entity.Role;
-import com.flowmatic.auth.entity.User;
-import com.flowmatic.auth.repository.UserRepository;
+import com.flowmatic.authentication.entity.Role;
+import com.flowmatic.authentication.entity.User;
+import com.flowmatic.authentication.repository.UserRepository;
 import com.flowmatic.auth.service.impl.ResendEmailService;
 import com.stripe.exception.ApiConnectionException;
 import com.stripe.exception.SignatureVerificationException;

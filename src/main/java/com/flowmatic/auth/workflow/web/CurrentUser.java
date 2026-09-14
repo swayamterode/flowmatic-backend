@@ -1,6 +1,6 @@
 package com.flowmatic.auth.workflow.web;
 
-import com.flowmatic.auth.repository.UserRepository;
+import com.flowmatic.authentication.repository.UserRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 

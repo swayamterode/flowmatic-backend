@@ -1,6 +1,6 @@
 package com.flowmatic.auth.workflow.integration;
 
-import com.flowmatic.auth.repository.UserRepository;
+import com.flowmatic.authentication.repository.UserRepository;
 import java.net.URI;
 import java.util.Map;
 import org.springframework.http.ResponseEntity;

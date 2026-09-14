@@ -7,9 +7,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.flowmatic.auth.entity.Role;
-import com.flowmatic.auth.entity.User;
-import com.flowmatic.auth.repository.UserRepository;
+import com.flowmatic.authentication.entity.Role;
+import com.flowmatic.authentication.entity.User;
+import com.flowmatic.authentication.repository.UserRepository;
 import com.flowmatic.auth.service.impl.ResendEmailService;
 import com.flowmatic.auth.workflow.entity.NodeRunLog;
 import com.flowmatic.auth.workflow.entity.NodeRunStatus;

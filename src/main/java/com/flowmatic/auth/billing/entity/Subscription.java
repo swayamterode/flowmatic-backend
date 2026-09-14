@@ -1,6 +1,6 @@
 package com.flowmatic.auth.billing.entity;
 
-import com.flowmatic.auth.entity.User;
+import com.flowmatic.authentication.entity.User;
 import jakarta.persistence.*;
 import java.time.Instant;
 import lombok.AllArgsConstructor;

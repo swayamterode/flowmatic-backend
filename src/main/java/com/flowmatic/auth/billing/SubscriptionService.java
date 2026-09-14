@@ -4,7 +4,7 @@ import com.flowmatic.auth.billing.entity.Subscription;
 import com.flowmatic.auth.billing.entity.SubscriptionPlan;
 import com.flowmatic.auth.billing.entity.SubscriptionStatus;
 import com.flowmatic.auth.billing.repository.SubscriptionRepository;
-import com.flowmatic.auth.repository.UserRepository;
+import com.flowmatic.authentication.repository.UserRepository;
 import java.time.Instant;
 import java.util.Optional;
 import org.slf4j.Logger;
