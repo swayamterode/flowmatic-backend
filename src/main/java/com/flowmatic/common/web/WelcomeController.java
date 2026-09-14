@@ -13,7 +13,7 @@ public class WelcomeController {
   public ResponseEntity<Map<String, Object>> welcome() {
     return ResponseEntity.ok(
         Map.of(
-            "message", "Welcome to the FlowMatic Auth service",
+            "message", "Welcome to the FlowMatic Backend service!",
             "status", "UP",
             "timestamp", Instant.now()));
   }
