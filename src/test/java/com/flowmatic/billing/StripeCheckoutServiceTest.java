@@ -1,4 +1,4 @@
-package com.flowmatic.auth.billing;
+package com.flowmatic.billing;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -8,7 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.flowmatic.auth.billing.entity.SubscriptionPlan;
+import com.flowmatic.billing.entity.SubscriptionPlan;
 import com.stripe.StripeClient;
 import com.stripe.model.checkout.Session;
 import com.stripe.param.checkout.SessionCreateParams;

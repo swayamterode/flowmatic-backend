@@ -1,6 +1,6 @@
-package com.flowmatic.auth.billing.repository;
+package com.flowmatic.billing.repository;
 
-import com.flowmatic.auth.billing.entity.Subscription;
+import com.flowmatic.billing.entity.Subscription;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

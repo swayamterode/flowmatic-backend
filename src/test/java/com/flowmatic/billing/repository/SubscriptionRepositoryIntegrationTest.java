@@ -1,10 +1,10 @@
-package com.flowmatic.auth.billing.repository;
+package com.flowmatic.billing.repository;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flowmatic.auth.billing.entity.Subscription;
-import com.flowmatic.auth.billing.entity.SubscriptionPlan;
-import com.flowmatic.auth.billing.entity.SubscriptionStatus;
+import com.flowmatic.billing.entity.Subscription;
+import com.flowmatic.billing.entity.SubscriptionPlan;
+import com.flowmatic.billing.entity.SubscriptionStatus;
 import com.flowmatic.authentication.entity.Role;
 import com.flowmatic.authentication.entity.User;
 import com.flowmatic.authentication.repository.UserRepository;

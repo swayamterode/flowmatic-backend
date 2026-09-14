@@ -1,7 +1,7 @@
-package com.flowmatic.auth.billing;
+package com.flowmatic.billing;
 
-import com.flowmatic.auth.billing.entity.SubscriptionPlan;
-import com.flowmatic.auth.billing.entity.SubscriptionStatus;
+import com.flowmatic.billing.entity.SubscriptionPlan;
+import com.flowmatic.billing.entity.SubscriptionStatus;
 import com.stripe.StripeClient;
 import com.stripe.exception.EventDataObjectDeserializationException;
 import com.stripe.exception.SignatureVerificationException;

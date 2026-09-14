@@ -1,4 +1,4 @@
-package com.flowmatic.auth.billing.entity;
+package com.flowmatic.billing.entity;
 
 import com.flowmatic.authentication.entity.User;
 import jakarta.persistence.*;

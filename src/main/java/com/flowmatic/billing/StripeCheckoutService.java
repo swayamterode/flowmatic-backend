@@ -1,6 +1,6 @@
-package com.flowmatic.auth.billing;
+package com.flowmatic.billing;
 
-import com.flowmatic.auth.billing.entity.SubscriptionPlan;
+import com.flowmatic.billing.entity.SubscriptionPlan;
 import com.stripe.StripeClient;
 import com.stripe.exception.StripeException;
 import com.stripe.model.checkout.Session;

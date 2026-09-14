@@ -1,6 +1,6 @@
-package com.flowmatic.auth.billing;
+package com.flowmatic.billing;
 
-import com.flowmatic.auth.billing.entity.SubscriptionPlan;
+import com.flowmatic.billing.entity.SubscriptionPlan;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 

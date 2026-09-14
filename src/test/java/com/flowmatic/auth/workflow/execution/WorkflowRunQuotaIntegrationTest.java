@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.flowmatic.auth.billing.entity.Subscription;
-import com.flowmatic.auth.billing.entity.SubscriptionPlan;
-import com.flowmatic.auth.billing.entity.SubscriptionStatus;
-import com.flowmatic.auth.billing.repository.SubscriptionRepository;
+import com.flowmatic.billing.entity.Subscription;
+import com.flowmatic.billing.entity.SubscriptionPlan;
+import com.flowmatic.billing.entity.SubscriptionStatus;
+import com.flowmatic.billing.repository.SubscriptionRepository;
 import com.flowmatic.authentication.entity.Role;
 import com.flowmatic.authentication.entity.User;
 import com.flowmatic.authentication.repository.UserRepository;

@@ -1,4 +1,4 @@
-package com.flowmatic.auth.billing;
+package com.flowmatic.billing;
 
 import com.stripe.StripeClient;
 import org.springframework.beans.factory.annotation.Value;

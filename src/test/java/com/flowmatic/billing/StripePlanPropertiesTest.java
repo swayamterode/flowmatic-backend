@@ -1,8 +1,8 @@
-package com.flowmatic.auth.billing;
+package com.flowmatic.billing;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.flowmatic.auth.billing.entity.SubscriptionPlan;
+import com.flowmatic.billing.entity.SubscriptionPlan;
 import org.junit.jupiter.api.Test;
 
 class StripePlanPropertiesTest {

@@ -1,4 +1,4 @@
-package com.flowmatic.auth.billing;
+package com.flowmatic.billing;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

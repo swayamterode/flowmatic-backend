@@ -1,4 +1,4 @@
-package com.flowmatic.auth.billing.web;
+package com.flowmatic.billing.web;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -11,9 +11,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.flowmatic.auth.billing.StripeCheckoutService;
-import com.flowmatic.auth.billing.StripeWebhookService;
-import com.flowmatic.auth.billing.entity.SubscriptionPlan;
+import com.flowmatic.billing.StripeCheckoutService;
+import com.flowmatic.billing.StripeWebhookService;
+import com.flowmatic.billing.entity.SubscriptionPlan;
 import com.flowmatic.authentication.entity.Role;
 import com.flowmatic.authentication.entity.User;
 import com.flowmatic.authentication.repository.UserRepository;
