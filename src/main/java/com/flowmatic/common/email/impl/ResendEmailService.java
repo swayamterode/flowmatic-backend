@@ -1,4 +1,4 @@
-package com.flowmatic.auth.service.impl;
+package com.flowmatic.common.email.impl;
 
 import java.util.LinkedHashMap;
 import java.util.List;

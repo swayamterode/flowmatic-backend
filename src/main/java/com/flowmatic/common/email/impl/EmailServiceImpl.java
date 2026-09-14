@@ -1,6 +1,6 @@
-package com.flowmatic.auth.service.impl;
+package com.flowmatic.common.email.impl;
 
-import com.flowmatic.auth.service.EmailService;
+import com.flowmatic.common.email.EmailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

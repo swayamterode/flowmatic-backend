@@ -1,4 +1,4 @@
-package com.flowmatic.auth.controller;
+package com.flowmatic.common.web;
 
 import java.time.Instant;
 import java.util.Map;

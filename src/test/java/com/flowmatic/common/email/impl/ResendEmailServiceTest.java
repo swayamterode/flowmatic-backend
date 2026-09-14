@@ -1,4 +1,4 @@
-package com.flowmatic.auth.service.impl;
+package com.flowmatic.common.email.impl;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;

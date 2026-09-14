@@ -1,2 +1,2 @@
 org.springframework.boot.EnvironmentPostProcessor=\
-com.flowmatic.auth.config.DotenvEnvironmentPostProcessor
+com.flowmatic.common.config.DotenvEnvironmentPostProcessor

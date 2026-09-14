@@ -1,11 +1,12 @@
 package com.flowmatic.auth.workflow.web;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.flowmatic.auth.dto.MessageResponse;
+import com.flowmatic.common.dto.MessageResponse;
 import com.flowmatic.authentication.entity.User;
 import com.flowmatic.authentication.repository.UserRepository;
 import com.flowmatic.auth.workflow.entity.Workflow;
 import com.flowmatic.auth.workflow.execution.WorkflowExecutionService;
+import com.flowmatic.common.web.CurrentUser;
 import com.flowmatic.auth.workflow.repository.WorkflowRepository;
 import java.util.List;
 import java.util.Map;

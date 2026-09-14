@@ -1,6 +1,6 @@
 package com.flowmatic.auth.workflow.executor;
 
-import com.flowmatic.auth.service.impl.ResendEmailService;
+import com.flowmatic.common.email.impl.ResendEmailService;
 import com.flowmatic.auth.workflow.entity.NodeType;
 import com.flowmatic.auth.workflow.execution.NodeExecutionContext;
 import com.flowmatic.auth.workflow.execution.NodeExecutionResult;

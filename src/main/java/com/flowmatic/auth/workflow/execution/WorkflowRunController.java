@@ -7,7 +7,7 @@ import com.flowmatic.auth.workflow.entity.WorkflowRun;
 import com.flowmatic.auth.workflow.repository.NodeRunLogRepository;
 import com.flowmatic.auth.workflow.repository.WorkflowRepository;
 import com.flowmatic.auth.workflow.repository.WorkflowRunRepository;
-import com.flowmatic.auth.workflow.web.CurrentUser;
+import com.flowmatic.common.web.CurrentUser;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;

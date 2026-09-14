@@ -10,7 +10,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
-import com.flowmatic.auth.service.impl.ResendEmailService;
+import com.flowmatic.common.email.impl.ResendEmailService;
 import com.flowmatic.auth.workflow.entity.NodeType;
 import com.flowmatic.auth.workflow.execution.NodeExecutionContext;
 import com.flowmatic.auth.workflow.execution.NodeExecutionResult;

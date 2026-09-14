@@ -3,7 +3,7 @@ package com.flowmatic.auth.workflow.dashboard;
 import com.flowmatic.auth.workflow.dashboard.dto.ExecutionRowDTO;
 import com.flowmatic.auth.workflow.dashboard.dto.StatusBreakdownDTO;
 import com.flowmatic.auth.workflow.dashboard.dto.SummaryStatsDTO;
-import com.flowmatic.auth.workflow.web.CurrentUser;
+import com.flowmatic.common.web.CurrentUser;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;

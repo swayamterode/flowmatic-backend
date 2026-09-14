@@ -8,7 +8,7 @@ import com.flowmatic.auth.billing.entity.SubscriptionStatus;
 import com.flowmatic.authentication.entity.Role;
 import com.flowmatic.authentication.entity.User;
 import com.flowmatic.authentication.repository.UserRepository;
-import com.flowmatic.auth.service.impl.ResendEmailService;
+import com.flowmatic.common.email.impl.ResendEmailService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;

@@ -1,4 +1,4 @@
-package com.flowmatic.auth.dto;
+package com.flowmatic.common.dto;
 
 import java.time.Instant;
 import lombok.AllArgsConstructor;

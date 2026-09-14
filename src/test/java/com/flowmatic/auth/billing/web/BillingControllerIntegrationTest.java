@@ -17,7 +17,7 @@ import com.flowmatic.auth.billing.entity.SubscriptionPlan;
 import com.flowmatic.authentication.entity.Role;
 import com.flowmatic.authentication.entity.User;
 import com.flowmatic.authentication.repository.UserRepository;
-import com.flowmatic.auth.service.impl.ResendEmailService;
+import com.flowmatic.common.email.impl.ResendEmailService;
 import com.stripe.exception.ApiConnectionException;
 import com.stripe.exception.SignatureVerificationException;
 import org.junit.jupiter.api.BeforeEach;

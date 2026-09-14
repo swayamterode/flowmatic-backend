@@ -2,7 +2,7 @@ package com.flowmatic.auth.billing.web;
 
 import com.flowmatic.auth.billing.StripeCheckoutService;
 import com.flowmatic.auth.billing.StripeWebhookService;
-import com.flowmatic.auth.workflow.web.CurrentUser;
+import com.flowmatic.common.web.CurrentUser;
 import com.stripe.exception.SignatureVerificationException;
 import com.stripe.exception.StripeException;
 import jakarta.validation.Valid;

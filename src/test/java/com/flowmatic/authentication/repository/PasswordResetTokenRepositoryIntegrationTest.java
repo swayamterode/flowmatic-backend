@@ -3,7 +3,7 @@ package com.flowmatic.authentication.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.flowmatic.authentication.entity.PasswordResetToken;
-import com.flowmatic.auth.service.impl.ResendEmailService;
+import com.flowmatic.common.email.impl.ResendEmailService;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;

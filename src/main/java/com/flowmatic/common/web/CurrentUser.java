@@ -1,4 +1,4 @@
-package com.flowmatic.auth.workflow.web;
+package com.flowmatic.common.web;
 
 import com.flowmatic.authentication.repository.UserRepository;
 import org.springframework.security.core.Authentication;

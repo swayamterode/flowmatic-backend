@@ -1,6 +1,6 @@
-package com.flowmatic.auth.exception;
+package com.flowmatic.common.exception;
 
-import com.flowmatic.auth.dto.ErrorResponse;
+import com.flowmatic.common.dto.ErrorResponse;
 import com.flowmatic.authentication.exception.EmailNotVerifiedException;
 import com.flowmatic.authentication.exception.InvalidCredentialsException;
 import com.flowmatic.authentication.exception.InvalidOtpException;

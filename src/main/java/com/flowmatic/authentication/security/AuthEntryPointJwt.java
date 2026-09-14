@@ -1,6 +1,6 @@
 package com.flowmatic.authentication.security;
 
-import com.flowmatic.auth.dto.ErrorResponse;
+import com.flowmatic.common.dto.ErrorResponse;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

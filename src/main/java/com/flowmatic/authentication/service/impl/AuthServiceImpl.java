@@ -2,7 +2,7 @@ package com.flowmatic.authentication.service.impl;
 
 import com.flowmatic.authentication.dto.AuthResponse;
 import com.flowmatic.authentication.dto.LoginRequest;
-import com.flowmatic.auth.dto.MessageResponse;
+import com.flowmatic.common.dto.MessageResponse;
 import com.flowmatic.authentication.dto.RegisterRequest;
 import com.flowmatic.authentication.dto.ResendOtpRequest;
 import com.flowmatic.authentication.dto.VerifyEmailRequest;

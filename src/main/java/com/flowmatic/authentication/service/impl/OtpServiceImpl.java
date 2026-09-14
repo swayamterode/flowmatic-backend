@@ -4,7 +4,7 @@ import com.flowmatic.authentication.entity.EmailOtp;
 import com.flowmatic.authentication.exception.InvalidOtpException;
 import com.flowmatic.authentication.exception.OtpResendCooldownException;
 import com.flowmatic.authentication.repository.OtpRepository;
-import com.flowmatic.auth.service.EmailService;
+import com.flowmatic.common.email.EmailService;
 import com.flowmatic.authentication.service.OtpService;
 import java.security.SecureRandom;
 import java.time.Duration;

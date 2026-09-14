@@ -1,4 +1,4 @@
-package com.flowmatic.auth.service;
+package com.flowmatic.common.email;
 
 public interface EmailService {
   void sendOtpEmail(String to, String code);
